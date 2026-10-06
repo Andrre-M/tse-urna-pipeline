@@ -23,7 +23,7 @@ class SectionRef:
         municipality: str | int,
         zone: str | int,
         section: str | int,
-    ) -> "SectionRef":
+    ) -> SectionRef:
         return cls(
             year=int(year),
             pleito=str(pleito),
