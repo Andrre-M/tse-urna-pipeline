@@ -78,25 +78,31 @@ SQLite foi escolhido para o estado operacional porque é local, transacional, gr
 
 A URL da seção e a URL de cada arquivo são `UNIQUE`. Reexecutar discovery atualiza metadados sem duplicar registros.
 
-Downloads existentes são reutilizados e recebem SHA-256 local.
+Downloads existentes são reutilizados e recebem SHA-256 local. Respostas transitórias
+(`408`, `425`, `429` e `5xx`) usam retry com backoff/`Retry-After`; erros permanentes não
+consomem tentativas desnecessárias.
 
 ## RAW
 
 RAW não é transformado:
 
 ```text
-data/raw/year=2026/pleito=3220/uf=CE/municipality=13897/zone=0003/section=0444/<hash>/<arquivo>.logjez
+data/raw/y=2026/p=3220/u=CE/m=13005/z=0030/s=0082/file-00000001.jez
 ```
 
 ## Bronze
 
 Bronze preserva a mensagem original e acrescenta metadados de origem.
 
-A implementação atual escreve por arquivo, adequada para validação funcional. Para processar/publicar o Ceará completo, a v0.3 introduzirá batch writing e compaction para evitar milhares de Parquets pequenos.
+O Bronze agrupa arquivos-fonte em lotes determinísticos. Cada lote escreve partes com
+quantidade-alvo de linhas e um `_SUCCESS.json`; uma interrupção antes do marcador reconstrói
+o mesmo lote sem duplicar eventos. A compactação posterior combina partes pequenas por
+`year/pleito/uf` usando execução streaming do Polars.
 
 ## Quarantine
 
-Linhas não interpretadas não são descartadas. Elas mantêm arquivo-fonte, número da linha, conteúdo bruto e motivo.
+Linhas não interpretadas não são descartadas. Elas mantêm arquivo-fonte, número da linha,
+conteúdo bruto e motivo em um JSONL idempotente por lote.
 
 ## Escala
 
@@ -104,6 +110,6 @@ A estratégia é:
 
 1. validar uma seção real;
 2. executar discovery do Ceará inteiro;
-3. otimizar a escrita/compaction;
-4. processar Ceará ponta a ponta;
+3. executar o piloto real (concluído: 5 arquivos, 31.947 eventos, zero rejeições);
+4. processar Ceará inteiro ponta a ponta;
 5. somente então decidir se Brasil inteiro agrega valor ao portfólio.

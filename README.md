@@ -36,7 +36,7 @@ BRONZE (Parquet)
 SILVER (Parquet)
 ```
 
-## Escopo atual — v0.2.1
+## Escopo atual — v0.3
 
 A unidade de teste ainda pode ser uma seção isolada, mas o **MVP operacional é a UF CE inteira**.
 
@@ -47,20 +47,27 @@ Já implementado:
 - expansão `município → zona → seção`;
 - manifest de seções com checkpoint de discovery;
 - discovery concorrente dos `-aux.json`;
-- identificação dos `.logjez` de cada seção;
+- identificação de logs antigos `.logjez` e do formato 2026 `*-log.jez`;
 - manifest persistente de arquivos em SQLite;
 - download com retry, checkpoint e SHA-256 local;
 - RAW imutável;
-- extração recursiva de `logd.dat` em `.logjez`/`.jez`;
+- extração segura de contêineres 7-Zip e ZIP, inclusive `.jez` aninhados;
 - parser do formato de log;
-- Bronze em Parquet;
-- quarantine para linhas inválidas;
+- Bronze em lotes Parquet com partes de tamanho controlado;
+- compactação reiniciável por eleição/UF;
+- quarantine idempotente por lote;
 - testes automatizados e CI.
 
-Ainda falta antes de considerar o Ceará processado de ponta a ponta:
+Validado contra o TSE em 6 de outubro de 2026:
 
-- validar contra os arquivos reais do TSE;
-- escrita do Bronze em lotes/compaction para evitar small files;
+- catálogo com **25.650 seções** do Ceará;
+- piloto com 5 seções e 5 arquivos `*-log.jez` reais;
+- 31.947 eventos válidos e zero linhas em quarantine no piloto;
+- geração de um lote Bronze e sua compactação.
+
+Ainda falta antes de considerar o Ceará inteiro concluído:
+
+- executar discovery, ingestão, extração e Bronze nas 25.650 seções;
 - relatório de qualidade por UF;
 - Silver normalizada;
 - publicação do dataset.
@@ -101,6 +108,7 @@ uv run urna-etl discover-uf --year 2026 --pleito 3220 --uf CE --limit 100
 uv run urna-etl ingest --limit 100
 uv run urna-etl extract --limit 100
 uv run urna-etl bronze --limit 100
+uv run urna-etl compact-bronze --year 2026 --pleito 3220 --uf CE
 uv run urna-etl status
 ```
 
@@ -131,6 +139,12 @@ Essa etapa:
 4. registra todos os `.logjez` encontrados.
 
 Se a execução for interrompida, a próxima execução continua apenas das seções `pending/failed`.
+Durante uma publicação gradual do TSE, use `--refresh-empty` para reconsultar seções que
+antes responderam sem logs:
+
+```bash
+uv run urna-etl discover-uf --year 2026 --pleito 3220 --uf CE --refresh-empty
+```
 
 Para testar o fluxo sem percorrer a UF inteira:
 
@@ -186,9 +200,22 @@ ou em lote:
 uv run urna-etl bronze --limit 100
 ```
 
-> Na v0.2 ainda é uma implementação funcional por arquivo. Antes de processar/publicar toda a UF, o próximo passo é trocar essa escrita por lotes compactados.
+O padrão agrupa até 100 arquivos-fonte por lote e limita cada parte a aproximadamente
+250 mil registros. Ambos são configuráveis:
 
-### 6. Status
+```bash
+uv run urna-etl bronze --batch-files 100 --target-rows 250000
+```
+
+### 6. Compactar Bronze
+
+```bash
+uv run urna-etl compact-bronze --year 2026 --pleito 3220 --uf CE
+```
+
+A compactação é uma camada derivada e reiniciável; RAW e os lotes Bronze permanecem imutáveis.
+
+### 7. Status
 
 ```bash
 uv run urna-etl status
@@ -238,7 +265,8 @@ src/tse_urna/
 
 **UF como unidade do MVP.** O projeto deve conseguir reconstruir o Ceará completo; seção isolada serve para teste/debug.
 
-**RAW imutável.** O arquivo recebido do TSE nunca é alterado.
+**RAW imutável.** O arquivo recebido do TSE nunca é alterado. O layout físico usa IDs curtos
+do manifest para funcionar também em caminhos Windows; URL, hash e nome original ficam no SQLite.
 
 **Idempotência.** Reexecutar discovery/ingestion não deve duplicar trabalho concluído.
 

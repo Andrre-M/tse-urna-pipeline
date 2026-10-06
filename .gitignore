@@ -10,12 +10,15 @@ dist/
 # Local data / state
 /data/raw/**
 /data/extracted/**
+/data/x/**
 /data/bronze/**
+/data/bronze_compacted/**
 /data/quarantine/**
 /data/silver/**
 /data/gold/**
 /metadata/*.db
 /metadata/*.db-*
+/metadata/discovery/**
 
 # Keep directory placeholders
 !/data/**/.gitkeep

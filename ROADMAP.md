@@ -23,15 +23,15 @@
 - [x] Retomada sem repetir seções concluídas
 - [x] Limite de execução para testes (`--limit`)
 - [x] Cache do catálogo estadual
-- [ ] Validação end-to-end contra o TSE real
+- [x] Validação end-to-end contra o TSE real (piloto de 5 seções)
 - [ ] Métricas completas de discovery/ingestão
 
 ## v0.3 — processamento eficiente do Ceará
 
-- [ ] Bronze escrito em lotes
-- [ ] Evitar small files
-- [ ] Compaction por partição lógica
-- [ ] Quarantine particionada
+- [x] Bronze escrito em lotes
+- [x] Evitar small files
+- [x] Compaction por partição lógica
+- [x] Quarantine particionada
 - [ ] Relatório de qualidade da UF
 - [ ] Benchmark de memória, disco e tempo
 - [ ] Silver normalizada

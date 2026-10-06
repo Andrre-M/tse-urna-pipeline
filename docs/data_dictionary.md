@@ -9,7 +9,7 @@
 | `zone` | string | Zona eleitoral, 4 dígitos |
 | `section` | string | Seção eleitoral, 4 dígitos |
 | `source_hash` | string | Hash/diretório publicado no arquivo auxiliar do TSE |
-| `source_file` | string | Nome do `.logjez` original |
+| `source_file` | string | Nome do `.logjez` ou `*-log.jez` original |
 | `source_log` | string | `logd.dat` efetivamente parseado |
 | `line_number` | int | Linha no arquivo de log |
 | `event_timestamp` | datetime | Data e hora do evento |
