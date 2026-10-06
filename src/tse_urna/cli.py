@@ -92,6 +92,7 @@ def discover_uf(
             concurrency=settings.concurrency,
             requests_per_second=settings.requests_per_second,
             timeout_seconds=settings.timeout_seconds,
+            retries=settings.retries,
             limit=limit,
         )
     )
@@ -149,6 +150,7 @@ def ingest(
             concurrency=settings.concurrency,
             requests_per_second=settings.requests_per_second,
             timeout_seconds=settings.timeout_seconds,
+            retries=settings.retries,
             limit=limit,
         )
     )

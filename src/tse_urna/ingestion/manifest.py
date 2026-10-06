@@ -69,12 +69,15 @@ class Manifest:
         self.path.parent.mkdir(parents=True, exist_ok=True)
 
     def connect(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(self.path)
+        conn = sqlite3.connect(self.path, timeout=30)
         conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA busy_timeout = 30000")
         return conn
 
     def init(self) -> None:
         with self.connect() as conn:
+            conn.execute("PRAGMA journal_mode = WAL")
+            conn.execute("PRAGMA synchronous = NORMAL")
             conn.executescript(DDL)
 
     def upsert_sections(self, sections: Iterable[tuple[object, str]]) -> int:
@@ -290,6 +293,20 @@ class Manifest:
                 (parsed_path, record_id),
             )
 
+    def mark_parsed_many(self, record_ids: Iterable[int], *, parsed_path: str) -> None:
+        ids = [int(record_id) for record_id in record_ids]
+        if not ids:
+            return
+        placeholders = ",".join("?" for _ in ids)
+        with self.connect() as conn:
+            conn.execute(
+                f"""
+                UPDATE files SET parse_status='parsed', parsed_path=?, error=NULL,
+                    updated_at=CURRENT_TIMESTAMP WHERE id IN ({placeholders})
+                """,
+                [parsed_path, *ids],
+            )
+
     def mark_parse_failed(self, record_id: int, *, error: str) -> None:
         with self.connect() as conn:
             conn.execute(
@@ -299,8 +316,6 @@ class Manifest:
                 """,
                 (error[:2000], record_id),
             )
-
-
     def all_section_status_counts(self) -> list[sqlite3.Row]:
         self.init()
         with self.connect() as conn:

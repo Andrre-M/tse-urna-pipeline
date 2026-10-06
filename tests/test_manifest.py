@@ -95,3 +95,37 @@ def test_all_section_status_counts(tmp_path: Path):
     counts = manifest.all_section_status_counts()
     by_status = {row["discovery_status"]: row["total"] for row in counts}
     assert by_status == {"discovered": 1, "pending": 1}
+
+
+def test_mark_parsed_many_is_atomic_for_a_batch(tmp_path: Path):
+    manifest = Manifest(tmp_path / "manifest.db")
+    ref = SectionRef.build(
+        year=2026, pleito=3220, uf="CE", municipality=13897, zone=3, section=444
+    )
+    manifest.upsert_discovered(
+        [
+            DiscoveredFile(
+                section=ref,
+                source_hash=f"hash-{index}",
+                filename=f"sample-{index}.logjez",
+                source_url=f"https://example.test/sample-{index}.logjez",
+            )
+            for index in range(2)
+        ]
+    )
+    rows = manifest.pending_downloads()
+    for row in rows:
+        manifest.mark_downloaded(
+            row["id"],
+            local_path="raw",
+            file_size=1,
+            sha256_local="sha",
+            http_status=200,
+        )
+        manifest.mark_extracted(row["id"], extracted_path="extracted")
+
+    extracted = manifest.extracted_files()
+    manifest.mark_parsed_many([row["id"] for row in extracted], parsed_path="batch=abc")
+
+    assert manifest.extracted_files() == []
+    assert manifest.status_counts()[0]["parse_status"] == "parsed"
