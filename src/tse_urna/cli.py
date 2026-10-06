@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+from collections import defaultdict
 from pathlib import Path
 
 import httpx
@@ -15,7 +17,8 @@ from tse_urna.extraction.logjez import extract_logjez
 from tse_urna.ingestion.downloader import download_pending
 from tse_urna.ingestion.manifest import Manifest
 from tse_urna.models import SectionRef
-from tse_urna.transformation.bronze import build_bronze
+from tse_urna.transformation.bronze import build_bronze_batch
+from tse_urna.transformation.compaction import compact_bronze_partition
 
 app = typer.Typer(no_args_is_help=True, help="Pipeline de logs públicos de urnas do TSE.")
 
@@ -193,36 +196,55 @@ def bronze(
     limit: int | None = typer.Option(
         None, help="Limita a quantidade de arquivos nesta execução."
     ),
+    batch_files: int = typer.Option(
+        settings.bronze_batch_files,
+        min=1,
+        help="Máximo de arquivos-fonte agrupados em cada lote reiniciável.",
+    ),
+    target_rows: int = typer.Option(
+        settings.bronze_target_rows,
+        min=1,
+        help="Número-alvo de registros por parte Parquet.",
+    ),
 ) -> None:
-    """Converte logs extraídos para Bronze Parquet e quarantine JSONL."""
+    """Converte logs extraídos em lotes Bronze e quarantine idempotentes."""
     manifest = _manifest()
     rows = manifest.extracted_files(limit=limit)
-
+    grouped: dict[tuple[int, str, str], list] = defaultdict(list)
     for row in rows:
-        extracted_root = Path(row["extracted_path"])
-        log_files = sorted(extracted_root.rglob("logd.dat"))
-        try:
-            total_valid = 0
-            total_rejected = 0
-            outputs: list[str] = []
-            for index, log_path in enumerate(log_files):
-                out_dir = (
-                    settings.data_dir
-                    / "bronze"
-                    / f"year={row['election_year']}"
-                    / f"pleito={row['pleito']}"
-                    / f"uf={row['uf'].upper()}"
-                    / f"municipality={row['municipality']}"
-                    / f"zone={row['zone']}"
-                    / f"section={row['section']}"
-                )
-                parquet = out_dir / f"{row['source_hash']}-{index:02d}.parquet"
-                quarantine = settings.data_dir / "quarantine" / "unparsed_lines.jsonl"
-                valid, rejected = build_bronze(
-                    log_path=log_path,
-                    output_path=parquet,
-                    quarantine_path=quarantine,
-                    metadata={
+        grouped[(row["election_year"], row["pleito"], row["uf"].upper())].append(row)
+
+    for (year, pleito, uf), partition_rows in grouped.items():
+        for offset in range(0, len(partition_rows), batch_files):
+            batch_rows = partition_rows[offset : offset + batch_files]
+            identity = "|".join(
+                f"{row['id']}:{row['source_hash']}"
+                for row in sorted(batch_rows, key=lambda r: r["id"])
+            )
+            batch_id = hashlib.sha256(identity.encode()).hexdigest()[:16]
+            output_dir = (
+                settings.data_dir
+                / "bronze"
+                / f"year={year}"
+                / f"pleito={pleito}"
+                / f"uf={uf}"
+                / f"batch={batch_id}"
+            )
+            quarantine_path = (
+                settings.data_dir
+                / "quarantine"
+                / f"year={year}"
+                / f"pleito={pleito}"
+                / f"uf={uf}"
+                / f"batch={batch_id}.jsonl"
+            )
+            try:
+                logs: list[tuple[Path, dict[str, str | int]]] = []
+                for row in batch_rows:
+                    log_files = sorted(Path(row["extracted_path"]).rglob("logd.dat"))
+                    if not log_files:
+                        raise FileNotFoundError(f"logd.dat ausente para {row['filename']}")
+                    metadata = {
                         "election_year": row["election_year"],
                         "pleito": row["pleito"],
                         "uf": row["uf"].upper(),
@@ -231,19 +253,47 @@ def bronze(
                         "section": row["section"],
                         "source_hash": row["source_hash"],
                         "source_file": row["filename"],
-                    },
-                )
-                total_valid += valid
-                total_rejected += rejected
-                outputs.append(str(parquet))
+                    }
+                    logs.extend((log_path, metadata) for log_path in log_files)
 
-            manifest.mark_parsed(row["id"], parsed_path=";".join(outputs))
-            typer.echo(
-                f"{row['filename']}: {total_valid} válidas / {total_rejected} quarantine"
-            )
-        except Exception as exc:
-            manifest.mark_parse_failed(row["id"], error=str(exc))
-            typer.echo(f"ERRO {row['filename']}: {exc}", err=True)
+                result = build_bronze_batch(
+                    logs=logs,
+                    output_dir=output_dir,
+                    quarantine_path=quarantine_path,
+                    target_rows=target_rows,
+                )
+                manifest.mark_parsed_many(
+                    [row["id"] for row in batch_rows], parsed_path=result.output_dir
+                )
+                typer.echo(
+                    f"batch={batch_id}: {len(batch_rows)} arquivo(s), "
+                    f"{result.valid_rows} válidas / {result.rejected_rows} quarantine, "
+                    f"{len(result.output_files)} Parquet(s)"
+                )
+            except Exception as exc:
+                for row in batch_rows:
+                    manifest.mark_parse_failed(row["id"], error=str(exc))
+                typer.echo(f"ERRO batch={batch_id}: {exc}", err=True)
+
+
+@app.command("compact-bronze")
+def compact_bronze(
+    year: int = typer.Option(...),
+    pleito: str = typer.Option(...),
+    uf: str = typer.Option(...),
+    target_size_mb: int = typer.Option(
+        256, min=1, help="Tamanho compactado aproximado de cada Parquet."
+    ),
+) -> None:
+    """Compacta os lotes Bronze de uma eleição/UF em poucos Parquets."""
+    uf = uf.upper()
+    partition = Path(f"year={year}") / f"pleito={pleito}" / f"uf={uf}"
+    outputs = compact_bronze_partition(
+        input_dir=settings.data_dir / "bronze" / partition,
+        output_dir=settings.data_dir / "bronze_compacted" / partition,
+        target_size_mb=target_size_mb,
+    )
+    typer.echo(f"{len(outputs)} Parquet(s) compactado(s) para {year}/{pleito}/{uf}.")
 
 
 @app.command("status")
