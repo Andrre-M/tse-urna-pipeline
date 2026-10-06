@@ -110,16 +110,25 @@ class Manifest:
         return len(rows)
 
     def pending_sections(
-        self, *, year: int, pleito: str | int, uf: str, limit: int | None = None
+        self,
+        *,
+        year: int,
+        pleito: str | int,
+        uf: str,
+        limit: int | None = None,
+        refresh_empty: bool = False,
     ) -> list[sqlite3.Row]:
         self.init()
         sql = """
             SELECT * FROM sections
             WHERE election_year=? AND pleito=? AND uf=?
-              AND discovery_status IN ('pending', 'failed')
+              AND (
+                discovery_status IN ('pending', 'failed')
+                OR (? AND discovery_status='discovered' AND files_found=0)
+              )
             ORDER BY municipality, zone, section
         """
-        params: list[object] = [int(year), str(pleito), uf.lower()]
+        params: list[object] = [int(year), str(pleito), uf.lower(), int(refresh_empty)]
         if limit is not None:
             sql += " LIMIT ?"
             params.append(int(limit))

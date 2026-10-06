@@ -39,17 +39,17 @@ def sha256_file(path: Path) -> str:
 
 
 def raw_path(data_dir: Path, row) -> Path:
+    suffix = Path(row["filename"]).suffix.lower() or ".bin"
     return (
         data_dir
         / "raw"
-        / f"year={row['election_year']}"
-        / f"pleito={row['pleito']}"
-        / f"uf={row['uf'].upper()}"
-        / f"municipality={row['municipality']}"
-        / f"zone={row['zone']}"
-        / f"section={row['section']}"
-        / row["source_hash"]
-        / row["filename"]
+        / f"y={row['election_year']}"
+        / f"p={row['pleito']}"
+        / f"u={row['uf'].upper()}"
+        / f"m={row['municipality']}"
+        / f"z={row['zone']}"
+        / f"s={row['section']}"
+        / f"file-{int(row['id']):08d}{suffix}"
     )
 
 
@@ -86,20 +86,6 @@ async def _download_one(
     retries: int = 4,
 ) -> None:
     destination = raw_path(data_dir, row)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-
-    # Se o arquivo já existir, valida e usa como checkpoint.
-    if destination.exists() and destination.stat().st_size > 0:
-        digest = sha256_file(destination)
-        manifest.mark_downloaded(
-            row["id"],
-            local_path=str(destination),
-            file_size=destination.stat().st_size,
-            sha256_local=digest,
-            http_status=200,
-        )
-        return
-
     temp_path = destination.with_suffix(destination.suffix + f".{row['id']}.part")
     last_error: Exception | None = None
     last_status: int | None = None
@@ -107,6 +93,18 @@ async def _download_one(
     for attempt in range(retries):
         response: httpx.Response | None = None
         try:
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            # Arquivo movido antes de uma interrupção é um checkpoint recuperável.
+            if destination.exists() and destination.stat().st_size > 0:
+                digest = sha256_file(destination)
+                manifest.mark_downloaded(
+                    row["id"],
+                    local_path=str(destination),
+                    file_size=destination.stat().st_size,
+                    sha256_local=digest,
+                    http_status=200,
+                )
+                return
             async with semaphore:
                 await limiter.wait()
                 async with client.stream("GET", row["source_url"]) as response:

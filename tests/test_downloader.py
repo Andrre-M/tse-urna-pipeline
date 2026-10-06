@@ -3,7 +3,7 @@ from pathlib import Path
 
 import httpx
 
-from tse_urna.ingestion.downloader import AsyncRateLimiter, _download_one
+from tse_urna.ingestion.downloader import AsyncRateLimiter, _download_one, raw_path
 from tse_urna.ingestion.manifest import Manifest
 from tse_urna.models import DiscoveredFile, SectionRef
 
@@ -87,3 +87,10 @@ def test_rate_limiter_rejects_non_positive_rate():
         assert "maior que zero" in str(exc)
     else:
         raise AssertionError("taxa zero deveria ser rejeitada")
+
+
+def test_raw_path_does_not_embed_long_source_hash(tmp_path: Path):
+    _, row = _pending_row(tmp_path)
+    path = raw_path(tmp_path / "data", row)
+    assert row["source_hash"] not in str(path)
+    assert path.name == f"file-{row['id']:08d}.logjez"

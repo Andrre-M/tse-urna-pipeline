@@ -46,6 +46,24 @@ def test_parses_legacy_nmarq_shape():
     assert [item.filename for item in result] == ["o00406-0605000020824.logjez"]
 
 
+def test_parses_current_typed_log_jez_shape():
+    payload = {
+        "hashes": [
+            {
+                "hash": "currenthash",
+                "arq": [
+                    {"nm": "o03220ce1300500300082-bu.dat", "tp": "bu"},
+                    {"nm": "o03220ce1300500300082-log.jez", "tp": "log"},
+                ],
+            }
+        ]
+    }
+    result = parse_aux_json(
+        payload, base_url="https://resultados.tse.jus.br/oficial", section=section()
+    )
+    assert [item.filename for item in result] == ["o03220ce1300500300082-log.jez"]
+
+
 def test_skips_hash_zero():
     payload = {
         "hashes": [

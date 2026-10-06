@@ -46,10 +46,15 @@ def test_section_manifest_is_resumable(tmp_path: Path):
     pending = manifest.pending_sections(year=2026, pleito=3220, uf="CE")
     assert len(pending) == 2
 
-    manifest.mark_section_discovered(pending[0]["id"], files_found=1, http_status=200)
+    manifest.mark_section_discovered(pending[0]["id"], files_found=0, http_status=200)
     remaining = manifest.pending_sections(year=2026, pleito=3220, uf="CE")
     assert len(remaining) == 1
     assert remaining[0]["section"] == "0445"
+
+    refreshable = manifest.pending_sections(
+        year=2026, pleito=3220, uf="CE", refresh_empty=True
+    )
+    assert {row["section"] for row in refreshable} == {"0444", "0445"}
 
 
 def test_file_stage_queries_support_limit(tmp_path: Path):

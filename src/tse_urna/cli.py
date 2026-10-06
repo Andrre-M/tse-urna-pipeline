@@ -53,6 +53,11 @@ def discover_uf(
     catalog_only: bool = typer.Option(
         False, "--catalog-only", help="Registra as seções, mas não consulta os aux.json."
     ),
+    refresh_empty: bool = typer.Option(
+        False,
+        "--refresh-empty",
+        help="Reconsulta seções concluídas sem logs, útil durante publicação gradual.",
+    ),
 ) -> None:
     """Descobre todas as seções de uma UF e seus arquivos .logjez."""
     uf = uf.upper()
@@ -97,6 +102,7 @@ def discover_uf(
             timeout_seconds=settings.timeout_seconds,
             retries=settings.retries,
             limit=limit,
+            refresh_empty=refresh_empty,
         )
     )
     typer.echo(f"{processed} seção(ões) tiveram o aux.json processado nesta execução.")
@@ -173,14 +179,8 @@ def extract(
         source = Path(row["local_path"])
         destination = (
             settings.data_dir
-            / "extracted"
-            / f"year={row['election_year']}"
-            / f"pleito={row['pleito']}"
-            / f"uf={row['uf'].upper()}"
-            / f"municipality={row['municipality']}"
-            / f"zone={row['zone']}"
-            / f"section={row['section']}"
-            / row["source_hash"]
+            / "x"
+            / f"f={int(row['id']):08d}"
         )
         try:
             logs = extract_logjez(source, destination)

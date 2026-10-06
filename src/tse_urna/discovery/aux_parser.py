@@ -6,16 +6,24 @@ from tse_urna.discovery.urls import urn_file_url
 from tse_urna.models import DiscoveredFile, SectionRef
 
 
-def _filenames(hash_entry: dict[str, Any]) -> list[str]:
+def _log_filenames(hash_entry: dict[str, Any]) -> list[str]:
     # Até 2022 e alguns espelhos: nmarq. Há dumps com strings e com {"nm": ...}.
     source = hash_entry.get("nmarq") if "nmarq" in hash_entry else hash_entry.get("arq", [])
 
     result: list[str] = []
     for item in source or []:
         if isinstance(item, str):
-            result.append(item)
+            filename = item
+            is_log = filename.lower().endswith((".logjez", "-log.jez"))
         elif isinstance(item, dict) and item.get("nm"):
-            result.append(str(item["nm"]))
+            filename = str(item["nm"])
+            is_log = str(item.get("tp", "")).lower() == "log" or filename.lower().endswith(
+                (".logjez", "-log.jez")
+            )
+        else:
+            continue
+        if is_log:
+            result.append(filename)
     return result
 
 
@@ -29,9 +37,7 @@ def parse_aux_json(
         if not source_hash or source_hash == "0":
             continue
 
-        for filename in _filenames(entry):
-            if not filename.lower().endswith(".logjez"):
-                continue
+        for filename in _log_filenames(entry):
             discovered.append(
                 DiscoveredFile(
                     section=section,

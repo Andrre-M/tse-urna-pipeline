@@ -74,8 +74,11 @@ async def discover_pending_sections(
     timeout_seconds: float,
     retries: int = 4,
     limit: int | None = None,
+    refresh_empty: bool = False,
 ) -> int:
-    rows = manifest.pending_sections(year=year, pleito=pleito, uf=uf, limit=limit)
+    rows = manifest.pending_sections(
+        year=year, pleito=pleito, uf=uf, limit=limit, refresh_empty=refresh_empty
+    )
     if not rows:
         return 0
 
