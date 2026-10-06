@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+dist/
+*.egg-info/
+
+# Local data / state
+/data/raw/**
+/data/extracted/**
+/data/bronze/**
+/data/quarantine/**
+/data/silver/**
+/data/gold/**
+/metadata/*.db
+/metadata/*.db-*
+
+# Keep directory placeholders
+!/data/**/.gitkeep
+!/metadata/.gitkeep
+
+# Secrets / local config
+.env
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

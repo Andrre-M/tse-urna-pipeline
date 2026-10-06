@@ -1,0 +1,22 @@
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from pathlib import Path
+
+
+@dataclass(frozen=True, slots=True)
+class Settings:
+    base_url: str = os.getenv("TSE_BASE_URL", "https://resultados.tse.jus.br/oficial")
+    requests_per_second: float = float(os.getenv("TSE_REQUESTS_PER_SECOND", "20"))
+    concurrency: int = int(os.getenv("TSE_CONCURRENCY", "8"))
+    timeout_seconds: float = float(os.getenv("TSE_TIMEOUT_SECONDS", "30"))
+    data_dir: Path = Path("data")
+    metadata_dir: Path = Path("metadata")
+
+    @property
+    def manifest_path(self) -> Path:
+        return self.metadata_dir / "manifest.db"
+
+
+settings = Settings()
