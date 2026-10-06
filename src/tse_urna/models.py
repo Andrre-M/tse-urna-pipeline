@@ -51,3 +51,13 @@ class LogEvent:
     message_raw: str
     mac: str
     line_number: int
+
+
+@dataclass(frozen=True, slots=True)
+class StageStats:
+    processed: int
+    succeeded: int
+
+    @property
+    def failed(self) -> int:
+        return self.processed - self.succeeded

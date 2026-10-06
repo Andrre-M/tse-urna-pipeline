@@ -8,6 +8,7 @@ from pathlib import Path
 import httpx
 
 from tse_urna.ingestion.manifest import Manifest
+from tse_urna.models import StageStats
 
 
 class AsyncRateLimiter:
@@ -84,7 +85,7 @@ async def _download_one(
     row,
     data_dir: Path,
     retries: int = 4,
-) -> None:
+) -> bool:
     destination = raw_path(data_dir, row)
     temp_path = destination.with_suffix(destination.suffix + f".{row['id']}.part")
     last_error: Exception | None = None
@@ -104,7 +105,7 @@ async def _download_one(
                     sha256_local=digest,
                     http_status=200,
                 )
-                return
+                return True
             async with semaphore:
                 await limiter.wait()
                 async with client.stream("GET", row["source_url"]) as response:
@@ -133,7 +134,7 @@ async def _download_one(
                 sha256_local=digest,
                 http_status=last_status or 200,
             )
-            return
+            return True
         except (httpx.HTTPError, OSError, ValueError) as exc:
             last_error = exc
             temp_path.unlink(missing_ok=True)
@@ -147,6 +148,7 @@ async def _download_one(
     manifest.mark_download_failed(
         row["id"], error=str(last_error or "download failed"), http_status=last_status
     )
+    return False
 
 
 async def download_pending(
@@ -158,17 +160,17 @@ async def download_pending(
     timeout_seconds: float,
     retries: int = 4,
     limit: int | None = None,
-) -> int:
+) -> StageStats:
     rows = manifest.pending_downloads(limit=limit)
     if not rows:
-        return 0
+        return StageStats(processed=0, succeeded=0)
 
     limiter = AsyncRateLimiter(requests_per_second)
     semaphore = asyncio.Semaphore(concurrency)
     timeout = httpx.Timeout(timeout_seconds)
 
     async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-        await asyncio.gather(
+        results = await asyncio.gather(
             *[
                 _download_one(
                     client=client,
@@ -182,4 +184,4 @@ async def download_pending(
                 for row in rows
             ]
         )
-    return len(rows)
+    return StageStats(processed=len(rows), succeeded=sum(results))

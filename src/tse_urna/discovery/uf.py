@@ -8,7 +8,7 @@ import httpx
 from tse_urna.discovery.aux_parser import parse_aux_json
 from tse_urna.ingestion.downloader import AsyncRateLimiter, is_retryable_status, retry_delay
 from tse_urna.ingestion.manifest import Manifest
-from tse_urna.models import SectionRef
+from tse_urna.models import SectionRef, StageStats
 
 
 async def _discover_one(
@@ -20,7 +20,7 @@ async def _discover_one(
     row,
     base_url: str,
     retries: int = 4,
-) -> None:
+) -> bool:
     last_error: Exception | None = None
     last_status: int | None = None
 
@@ -47,7 +47,7 @@ async def _discover_one(
             manifest.mark_section_discovered(
                 row["id"], files_found=len(discovered), http_status=last_status
             )
-            return
+            return True
         except (httpx.HTTPError, ValueError, KeyError) as exc:
             last_error = exc
             status = response.status_code if response is not None else None
@@ -60,6 +60,7 @@ async def _discover_one(
     manifest.mark_section_discovery_failed(
         row["id"], error=str(last_error or "discovery failed"), http_status=last_status
     )
+    return False
 
 
 async def discover_pending_sections(
@@ -75,19 +76,19 @@ async def discover_pending_sections(
     retries: int = 4,
     limit: int | None = None,
     refresh_empty: bool = False,
-) -> int:
+) -> StageStats:
     rows = manifest.pending_sections(
         year=year, pleito=pleito, uf=uf, limit=limit, refresh_empty=refresh_empty
     )
     if not rows:
-        return 0
+        return StageStats(processed=0, succeeded=0)
 
     limiter = AsyncRateLimiter(requests_per_second)
     semaphore = asyncio.Semaphore(concurrency)
     timeout = httpx.Timeout(timeout_seconds)
 
     async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
-        await asyncio.gather(
+        results = await asyncio.gather(
             *[
                 _discover_one(
                     client=client,
@@ -101,7 +102,7 @@ async def discover_pending_sections(
                 for row in rows
             ]
         )
-    return len(rows)
+    return StageStats(processed=len(rows), succeeded=sum(results))
 
 
 def state_config_cache_path(

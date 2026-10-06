@@ -33,7 +33,9 @@ def init_project() -> None:
     for path in [
         settings.data_dir / "raw",
         settings.data_dir / "extracted",
+        settings.data_dir / "x",
         settings.data_dir / "bronze",
+        settings.data_dir / "bronze_compacted",
         settings.data_dir / "quarantine",
         settings.metadata_dir,
     ]:
@@ -90,7 +92,7 @@ def discover_uf(
         typer.echo("Catálogo concluído; consulta dos aux.json não executada.")
         return
 
-    processed = asyncio.run(
+    stats = asyncio.run(
         discover_pending_sections(
             manifest=manifest,
             base_url=settings.base_url,
@@ -105,13 +107,15 @@ def discover_uf(
             refresh_empty=refresh_empty,
         )
     )
-    typer.echo(f"{processed} seção(ões) tiveram o aux.json processado nesta execução.")
+    typer.echo(f"Discovery: {stats.succeeded}/{stats.processed} seção(ões) concluída(s).")
 
     for row in manifest.section_status_counts(year=year, pleito=pleito, uf=uf):
         typer.echo(
             f"discovery={row['discovery_status']:<10} total={row['total']} "
             f"logjez={row['files_found'] or 0}"
         )
+    if stats.failed:
+        raise typer.Exit(code=1)
 
 
 @app.command("discover-section")
@@ -152,7 +156,7 @@ def ingest(
     ),
 ) -> None:
     """Baixa arquivos pendentes do manifest de forma idempotente."""
-    count = asyncio.run(
+    stats = asyncio.run(
         download_pending(
             manifest=_manifest(),
             data_dir=settings.data_dir,
@@ -163,7 +167,9 @@ def ingest(
             limit=limit,
         )
     )
-    typer.echo(f"{count} registro(s) de download processado(s).")
+    typer.echo(f"Downloads: {stats.succeeded}/{stats.processed} concluído(s).")
+    if stats.failed:
+        raise typer.Exit(code=1)
 
 
 @app.command("extract")
@@ -175,6 +181,7 @@ def extract(
     """Extrai logd.dat dos .logjez baixados ainda pendentes."""
     manifest = _manifest()
     rows = manifest.downloaded_files(limit=limit)
+    failures = 0
     for row in rows:
         source = Path(row["local_path"])
         destination = (
@@ -187,8 +194,11 @@ def extract(
             manifest.mark_extracted(row["id"], extracted_path=str(destination))
             typer.echo(f"{source.name}: {len(logs)} log(s) extraído(s)")
         except Exception as exc:
+            failures += 1
             manifest.mark_extract_failed(row["id"], error=str(exc))
             typer.echo(f"ERRO {source}: {exc}", err=True)
+    if failures:
+        raise typer.Exit(code=1)
 
 
 @app.command("bronze")
@@ -210,6 +220,7 @@ def bronze(
     """Converte logs extraídos em lotes Bronze e quarantine idempotentes."""
     manifest = _manifest()
     rows = manifest.extracted_files(limit=limit)
+    failures = 0
     grouped: dict[tuple[int, str, str], list] = defaultdict(list)
     for row in rows:
         grouped[(row["election_year"], row["pleito"], row["uf"].upper())].append(row)
@@ -271,9 +282,12 @@ def bronze(
                     f"{len(result.output_files)} Parquet(s)"
                 )
             except Exception as exc:
+                failures += len(batch_rows)
                 for row in batch_rows:
                     manifest.mark_parse_failed(row["id"], error=str(exc))
                 typer.echo(f"ERRO batch={batch_id}: {exc}", err=True)
+    if failures:
+        raise typer.Exit(code=1)
 
 
 @app.command("compact-bronze")
