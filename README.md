@@ -2,6 +2,10 @@
 
 Pipeline de engenharia de dados para coletar, preservar, extrair e estruturar os **logs públicos das urnas eletrônicas** disponibilizados pelo Tribunal Superior Eleitoral (TSE).
 
+Para retomar o projeto em um novo chat ou com outro agente, comece por
+[`PROJECT_STATE.md`](PROJECT_STATE.md). As regras de trabalho ficam em [`AGENTS.md`](AGENTS.md)
+e o procedimento operacional em [`docs/runbook.md`](docs/runbook.md).
+
 > O foco deste repositório é **engenharia de dados**. Análises e dashboard são consumidores do dataset, não o núcleo do projeto.
 
 ## Objetivo
