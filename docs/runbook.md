@@ -7,6 +7,7 @@ uv sync --locked --extra dev
 uv run ruff check .
 uv run pytest -q
 uv run urna-etl init
+uv run urna-etl preflight
 uv run urna-etl status
 ```
 
@@ -18,6 +19,10 @@ uv run urna-etl status
 ```
 
 Expected baseline: 25,650 sections.
+
+`preflight` checks that `data/` and `metadata/` are writable and requires 40 GiB free on
+the data volume. For a deliberately smaller validation environment, override the threshold
+explicitly with `--min-free-gb`.
 
 ## Bounded processing
 

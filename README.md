@@ -100,6 +100,7 @@ uv sync --extra dev
 uv run pytest -q
 uv run ruff check .
 uv run urna-etl init
+uv run urna-etl preflight
 
 # Cataloga todas as seções do Ceará sem consultar cada aux.json
 uv run urna-etl discover-uf --year 2026 --pleito 3220 --uf CE --catalog-only
@@ -125,6 +126,12 @@ uv run urna-etl init
 ```
 
 ### 2. Catalogar e descobrir todas as seções do Ceará
+
+Antes da execução, confirme os caminhos locais e pelo menos 40 GiB livres:
+
+```bash
+uv run urna-etl preflight
+```
 
 ```bash
 uv run urna-etl discover-uf \
