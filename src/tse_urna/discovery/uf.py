@@ -31,6 +31,11 @@ async def _discover_one(
                 await limiter.wait()
                 response = await client.get(row["aux_url"])
             last_status = response.status_code
+            if response.status_code == 404:
+                manifest.mark_section_discovered(
+                    row["id"], files_found=0, http_status=response.status_code
+                )
+                return True
             response.raise_for_status()
             payload = response.json()
 
