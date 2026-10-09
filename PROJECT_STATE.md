@@ -4,17 +4,23 @@ Updated: 2026-10-09
 
 ## Status
 
-v0.3. Pilot passed. Preflight implemented and published. Full Ceará run not started.
+v0.3. Bounded processing validated beyond the pilot. Full Ceará run not started.
 
 ## Verified
 
 - Catalog: 25,650 CE sections for 2026/3220.
-- Five real sections completed discovery through Bronze compaction.
-- Result: 31,947 valid events; zero quarantined lines.
-- Preflight confirms writable local paths and enforces 40 GiB free by default.
-- Preflight rechecked on 2026-10-09: 24.3 GiB free; full processing remains blocked.
-- Local: 28 tests passing; Ruff clean.
-- GitHub Actions: Python 3.12 and 3.13 passing (run `37455881157`).
+- Preflight blocks below 40 GiB only for an unbounded run; `--limit` uses a
+  proportional estimate and warns when the full workload would not fit.
+- Bounded discovery checkpoint: 1,934 sections completed, 1,816 logs found and
+  23,716 sections pending.
+- Bounded file checkpoint: 720 files completed through Bronze; 1,096 discovered
+  files remain pending for download.
+- Bounded result: 4,185,149 valid events, zero quarantined lines and one compacted
+  Parquet (58,097,587 bytes).
+- Current generated data uses 0.551 GiB; 22.2 GiB remained free after the batch.
+- Real-run regressions fixed for unpublished `aux.json` (404), gzip-encoded TSE
+  downloads and transient Windows directory locks.
+- Local: 34 tests passing; Ruff clean.
 
 ## Ready
 
@@ -32,9 +38,10 @@ v0.3. Pilot passed. Preflight implemented and published. Full Ceará run not sta
 
 ## Next
 
-1. Free enough disk for the 40 GiB preflight threshold (only 24.3 GiB was available).
-2. Process Ceará in bounded batches using `docs/runbook.md`.
-3. Measure failures, throughput and disk use.
-4. Produce the quality report before Silver.
+1. Continue Ceará in bounded batches using `docs/runbook.md` and record operational
+   metrics after each batch.
+2. Keep the unbounded run blocked until 40 GiB is available and the user explicitly
+   authorizes it.
+3. Produce the Ceará quality report after the full dataset, before Silver.
 
 Do not start an unbounded run.

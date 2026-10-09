@@ -20,15 +20,17 @@ uv run urna-etl status
 
 Expected baseline: 25,650 sections.
 
-`preflight` checks that `data/` and `metadata/` are writable and requires 40 GiB free on
-the data volume. For a deliberately smaller validation environment, override the threshold
-explicitly with `--min-free-gb`.
+`preflight` checks that `data/` and `metadata/` are writable. Without `--limit`, it
+requires 40 GiB for the full Ceará workload. For a bounded run, pass the largest stage
+limit: the disk requirement is estimated proportionally against the 25,650-section
+catalog, and insufficient space for the full workload is reported only as a warning.
 
 ## Bounded processing
 
 Run one stage at a time. Check status after each command. Repeat until its pending/failed count is zero.
 
 ```powershell
+uv run urna-etl preflight --limit 1000
 uv run urna-etl discover-uf --year 2026 --pleito 3220 --uf CE --limit 1000
 uv run urna-etl ingest --limit 500
 uv run urna-etl extract --limit 500

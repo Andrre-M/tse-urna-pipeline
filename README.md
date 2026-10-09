@@ -100,7 +100,7 @@ uv sync --extra dev
 uv run pytest -q
 uv run ruff check .
 uv run urna-etl init
-uv run urna-etl preflight
+uv run urna-etl preflight --limit 100
 
 # Cataloga todas as seções do Ceará sem consultar cada aux.json
 uv run urna-etl discover-uf --year 2026 --pleito 3220 --uf CE --catalog-only
@@ -158,12 +158,17 @@ uv run urna-etl discover-uf --year 2026 --pleito 3220 --uf CE --refresh-empty
 Para testar o fluxo sem percorrer a UF inteira:
 
 ```bash
+uv run urna-etl preflight --limit 100
 uv run urna-etl discover-uf \
   --year 2026 \
   --pleito 3220 \
   --uf CE \
   --limit 100
 ```
+
+Com `--limit`, o preflight estima o espaço proporcionalmente ao catálogo de 25.650
+seções. Se houver espaço para o lote, a falta dos 40 GiB da carga completa gera apenas
+um aviso. Sem `--limit`, os 40 GiB continuam obrigatórios.
 
 Também é possível apenas catalogar as seções:
 
