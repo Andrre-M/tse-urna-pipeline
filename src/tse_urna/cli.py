@@ -50,7 +50,12 @@ def preflight(
     min_free_gb: float = typer.Option(
         40.0,
         min=0,
-        help="Espaço livre mínimo exigido no volume de dados, em GiB.",
+        help="Espaço livre estimado para a carga completa, em GiB.",
+    ),
+    limit: int | None = typer.Option(
+        None,
+        min=1,
+        help="Dimensiona a exigência de disco para um lote limitado.",
     ),
 ) -> None:
     """Valida caminhos locais e espaço em disco antes do processamento."""
@@ -58,9 +63,11 @@ def preflight(
         data_dir=settings.data_dir,
         metadata_dir=settings.metadata_dir,
         min_free_bytes=int(min_free_gb * 1024**3),
+        limit=limit,
     )
     for check in checks:
-        typer.echo(f"{'OK' if check.ok else 'ERRO'} {check.name}: {check.detail}")
+        label = {"ok": "OK", "warning": "AVISO", "error": "ERRO"}[check.status]
+        typer.echo(f"{label} {check.name}: {check.detail}")
     if not all(check.ok for check in checks):
         raise typer.Exit(code=1)
 
