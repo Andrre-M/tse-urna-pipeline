@@ -1,4 +1,5 @@
 import asyncio
+import gzip
 from pathlib import Path
 
 import httpx
@@ -78,6 +79,38 @@ def test_download_does_not_retry_permanent_404(tmp_path: Path):
     asyncio.run(run())
     assert calls == 1
     assert manifest.status_counts()[0]["status"] == "failed"
+
+
+def test_download_validates_encoded_transfer_size(tmp_path: Path):
+    manifest, row = _pending_row(tmp_path)
+    content = b"archive"
+    encoded = gzip.compress(content)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            content=encoded,
+            headers={
+                "Content-Encoding": "gzip",
+                "Content-Length": str(len(encoded)),
+            },
+        )
+
+    async def run() -> None:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            assert await _download_one(
+                client=client,
+                limiter=AsyncRateLimiter(10_000),
+                semaphore=asyncio.Semaphore(1),
+                manifest=manifest,
+                row=row,
+                data_dir=tmp_path / "data",
+                retries=1,
+            )
+
+    asyncio.run(run())
+    downloaded = raw_path(tmp_path / "data", row)
+    assert downloaded.read_bytes() == content
 
 
 def test_rate_limiter_rejects_non_positive_rate():

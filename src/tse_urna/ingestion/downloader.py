@@ -120,9 +120,15 @@ async def _download_one(
 
             if downloaded_size == 0:
                 raise OSError("resposta vazia")
-            if expected_size is not None and downloaded_size != int(expected_size):
+            content_encoding = response.headers.get("Content-Encoding")
+            if (
+                expected_size is not None
+                and content_encoding is None
+                and downloaded_size != int(expected_size)
+            ):
                 raise OSError(
-                    f"download incompleto: esperado={expected_size}, recebido={downloaded_size}"
+                    f"download incompleto: esperado={expected_size}, "
+                    f"recebido={downloaded_size}"
                 )
 
             temp_path.replace(destination)
