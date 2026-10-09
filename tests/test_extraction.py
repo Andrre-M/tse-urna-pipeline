@@ -34,3 +34,30 @@ def test_extracts_current_zip_based_jez(tmp_path: Path):
 
     assert len(logs) == 1
     assert logs[0].read_text(encoding="utf-8") == "linha\n"
+
+
+def test_extraction_retries_transient_windows_directory_lock(
+    tmp_path: Path, monkeypatch
+):
+    log = tmp_path / "logd.dat"
+    log.write_text("linha\n", encoding="utf-8")
+    archive = tmp_path / "sample-log.jez"
+    with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED) as output:
+        output.write(log, arcname="logd.dat")
+
+    original_replace = Path.replace
+    calls = 0
+
+    def transient_failure(path: Path, target: Path):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise PermissionError("arquivo temporariamente bloqueado")
+        return original_replace(path, target)
+
+    monkeypatch.setattr(Path, "replace", transient_failure)
+
+    logs = extract_logjez(archive, tmp_path / "current")
+
+    assert calls == 2
+    assert len(logs) == 1
