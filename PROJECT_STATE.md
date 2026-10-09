@@ -4,7 +4,7 @@ Updated: 2026-10-09
 
 ## Status
 
-v0.3. Pilot passed. Preflight implemented. Full Ceará run not started.
+v0.3. Pilot passed. Preflight implemented and published. Full Ceará run not started.
 
 ## Verified
 
@@ -12,6 +12,7 @@ v0.3. Pilot passed. Preflight implemented. Full Ceará run not started.
 - Five real sections completed discovery through Bronze compaction.
 - Result: 31,947 valid events; zero quarantined lines.
 - Preflight confirms writable local paths and enforces 40 GiB free by default.
+- Preflight rechecked on 2026-10-09: 24.3 GiB free; full processing remains blocked.
 - Local: 28 tests passing; Ruff clean.
 - GitHub Actions: Python 3.12 and 3.13 passing (run `37455881157`).
 
