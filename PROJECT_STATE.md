@@ -1,67 +1,39 @@
 # Project state
 
-Last updated: 2026-10-07
+Updated: 2026-10-09
 
-## Mission
+## Status
 
-Build a reproducible, resumable data pipeline that discovers, downloads, extracts, and converts
-the public TSE electronic-voting-machine logs for the complete state of Ceará into traceable
-Parquet datasets. Dashboard work is intentionally out of scope until the pipeline and dataset
-quality are complete.
+v0.3. Pilot passed. Full Ceará run not started.
 
-## Current milestone
+## Verified
 
-Version line: v0.3 — real-data pilot validated; full Ceará execution not started.
+- Catalog: 25,650 CE sections for 2026/3220.
+- Five real sections completed discovery through Bronze compaction.
+- Result: 31,947 valid events; zero quarantined lines.
+- Local: 26 tests passing; Ruff clean.
+- GitHub Actions: Python 3.12 and 3.13 passing (run `37455881157`).
 
-Repository: `Andrre-M/tse-urna-pipeline`, branch `main`.
+## Ready
 
-Latest validated commit at the time of this update: `bf91d98`.
+- Full-UF discovery with SQLite checkpoints.
+- Idempotent download with rate limit, retry and atomic writes.
+- ZIP/7-Zip `.jez` extraction and `logd.dat` parser.
+- Batched Parquet Bronze, quarantine and compaction.
+- Limits per CLI stage, tests, lockfile and CI.
 
-## Verified evidence
+## Missing
 
-- The official 2026/3220 Ceará catalog contained 25,650 sections on 2026-10-06.
-- Five real sections completed discovery, download, extraction, Bronze, and compaction.
-- The pilot produced 31,947 valid Bronze events and zero rejected lines.
-- Current TSE log entries use `tp: "log"` and names ending in `-log.jez`.
-- The observed 2026 `.jez` files are ZIP containers; legacy 7-Zip extraction remains supported.
-- Local verification: 26 tests passing and Ruff clean.
-- GitHub Actions passed on Python 3.12 and 3.13 in workflow run `37455881157`.
+- Preflight for paths and disk capacity.
+- Full Ceará processing and operational metrics.
+- Ceará quality report.
+- Silver, publication and dashboard.
 
-## Implemented capabilities
+## Next
 
-- Full-UF catalog parsing and section-level discovery checkpoints.
-- SQLite manifest in WAL mode with idempotent section and file records.
-- Concurrent discovery and ingestion with rate limiting, retry/backoff, and `Retry-After`.
-- Atomic downloads with local SHA-256 and Windows-safe short physical paths.
-- Atomic ZIP/7-Zip extraction, nested `.jez` support, and unsafe-member rejection.
-- `logd.dat` parser with raw-message preservation.
-- Deterministic Bronze batches, target row sizing, per-batch quarantine, and success markers.
-- Streaming Bronze compaction by election/UF.
-- Non-zero command exits after checkpointed partial failures.
-- CI, lockfile, lint, tests, architecture, data dictionary, and operating documentation.
+1. Implement `preflight`.
+2. Process Ceará in bounded batches using `docs/runbook.md`.
+3. Measure failures, throughput and disk use.
+4. Produce the quality report before Silver.
 
-## Next recommended work
-
-1. Add an explicit capacity/preflight command that estimates disk needs and confirms writable
-   paths before a full run.
-2. Run discovery for all pending Ceará sections in bounded batches and inspect failures.
-3. Run ingestion in bounded batches while collecting throughput, retry, file-size, and disk-use
-   measurements.
-4. Extract and build Bronze in bounded batches; compact only after batch outputs are stable.
-5. Produce a Ceará quality report before starting Silver.
-
-Use `docs/runbook.md` for commands and stop conditions. Do not jump directly to an unbounded
-full-state run merely because the pipeline supports it.
-
-## Known limitations
-
-- Only five real sections have completed the full pipeline so far.
-- There is no capacity estimator or formal UF quality-report command yet.
-- Compaction targets approximate compressed input size, not an exact output size.
-- Silver, publication, and dashboard layers are not implemented.
-
-## Handoff rule
-
-Before ending material work, update this file only with verified facts: current milestone,
-evidence, known limitations, and the next recommended action. Git history remains the detailed
-record of implementation changes.
+Do not start an unbounded run.
