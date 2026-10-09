@@ -17,6 +17,7 @@ from tse_urna.extraction.logjez import extract_logjez
 from tse_urna.ingestion.downloader import download_pending
 from tse_urna.ingestion.manifest import Manifest
 from tse_urna.models import SectionRef
+from tse_urna.preflight import run_preflight
 from tse_urna.transformation.bronze import build_bronze_batch
 from tse_urna.transformation.compaction import compact_bronze_partition
 
@@ -42,6 +43,26 @@ def init_project() -> None:
         path.mkdir(parents=True, exist_ok=True)
     _manifest().init()
     typer.echo(f"Manifest inicializado em {settings.manifest_path}")
+
+
+@app.command("preflight")
+def preflight(
+    min_free_gb: float = typer.Option(
+        40.0,
+        min=0,
+        help="Espaço livre mínimo exigido no volume de dados, em GiB.",
+    ),
+) -> None:
+    """Valida caminhos locais e espaço em disco antes do processamento."""
+    checks = run_preflight(
+        data_dir=settings.data_dir,
+        metadata_dir=settings.metadata_dir,
+        min_free_bytes=int(min_free_gb * 1024**3),
+    )
+    for check in checks:
+        typer.echo(f"{'OK' if check.ok else 'ERRO'} {check.name}: {check.detail}")
+    if not all(check.ok for check in checks):
+        raise typer.Exit(code=1)
 
 
 @app.command("discover-uf")
