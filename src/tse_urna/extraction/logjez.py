@@ -2,27 +2,17 @@ from __future__ import annotations
 
 import shutil
 import tempfile
-import time
 import zipfile
 from pathlib import Path
 from uuid import uuid4
 
 import py7zr
 
+from tse_urna.filesystem import promote_directory
+
 
 class ExtractionError(RuntimeError):
     pass
-
-
-def _promote_staging(staging: Path, destination: Path, retries: int = 5) -> None:
-    for attempt in range(retries):
-        try:
-            staging.replace(destination)
-            return
-        except PermissionError:
-            if attempt + 1 == retries:
-                raise
-            time.sleep(0.05 * 2**attempt)
 
 
 def _validate_members(names: list[str]) -> None:
@@ -88,7 +78,7 @@ def extract_logjez(source: Path, destination: Path) -> list[Path]:
         (staging / "_SUCCESS").write_text("ok\n", encoding="ascii")
         if destination.exists():
             shutil.rmtree(destination)
-        _promote_staging(staging, destination)
+        promote_directory(staging, destination)
         return sorted(destination.rglob("logd.dat"))
     finally:
         if staging.exists():

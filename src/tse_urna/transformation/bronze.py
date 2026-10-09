@@ -8,6 +8,7 @@ from uuid import uuid4
 
 import polars as pl
 
+from tse_urna.filesystem import promote_directory
 from tse_urna.parsing.log_parser import parse_file
 
 
@@ -137,7 +138,7 @@ def build_bronze_batch(
         quarantine_temp.replace(quarantine_path)
         if output_dir.exists():
             shutil.rmtree(output_dir)
-        staging.replace(output_dir)
+        promote_directory(staging, output_dir)
         return result
     finally:
         quarantine_temp.unlink(missing_ok=True)

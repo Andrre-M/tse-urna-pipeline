@@ -58,6 +58,35 @@ def test_bronze_batch_is_chunked_and_checkpointed(tmp_path: Path):
     assert quarantine.read_text(encoding="utf-8").count("unparsed_line") == 1
 
 
+def test_bronze_retries_transient_windows_directory_lock(tmp_path: Path, monkeypatch):
+    log = tmp_path / "logd.dat"
+    _write_log(log, ["um"])
+    output = tmp_path / "bronze" / "batch=abc"
+    quarantine = tmp_path / "quarantine" / "batch=abc.jsonl"
+    original_replace = Path.replace
+    promotion_calls = 0
+
+    def transient_failure(path: Path, target: Path):
+        nonlocal promotion_calls
+        if path.name.startswith(".batch=abc.tmp-"):
+            promotion_calls += 1
+            if promotion_calls == 1:
+                raise PermissionError("diretório temporariamente bloqueado")
+        return original_replace(path, target)
+
+    monkeypatch.setattr(Path, "replace", transient_failure)
+
+    result = build_bronze_batch(
+        logs=[(log, _metadata("a"))],
+        output_dir=output,
+        quarantine_path=quarantine,
+        target_rows=2,
+    )
+
+    assert promotion_calls == 2
+    assert result.valid_rows == 1
+
+
 def test_compaction_reuses_unchanged_partition(tmp_path: Path):
     input_dir = tmp_path / "bronze"
     for batch, value in [("a", 1), ("b", 2)]:

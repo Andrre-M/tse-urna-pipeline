@@ -7,6 +7,8 @@ from uuid import uuid4
 
 import polars as pl
 
+from tse_urna.filesystem import promote_directory
+
 
 def _groups_by_size(paths: list[Path], target_bytes: int) -> list[list[Path]]:
     groups: list[list[Path]] = []
@@ -58,7 +60,7 @@ def compact_bronze_partition(
         )
         if output_dir.exists():
             shutil.rmtree(output_dir)
-        staging.replace(output_dir)
+        promote_directory(staging, output_dir)
         return [output_dir / name for name in names]
     finally:
         if staging.exists():
