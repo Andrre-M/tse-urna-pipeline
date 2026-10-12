@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 
@@ -14,8 +14,12 @@ class Settings:
     retries: int = int(os.getenv("TSE_RETRIES", "4"))
     bronze_batch_files: int = int(os.getenv("TSE_BRONZE_BATCH_FILES", "100"))
     bronze_target_rows: int = int(os.getenv("TSE_BRONZE_TARGET_ROWS", "250000"))
-    data_dir: Path = Path("data")
-    metadata_dir: Path = Path("metadata")
+    data_dir: Path = field(
+        default_factory=lambda: Path(os.getenv("TSE_DATA_DIR", "data"))
+    )
+    metadata_dir: Path = field(
+        default_factory=lambda: Path(os.getenv("TSE_METADATA_DIR", "metadata"))
+    )
 
     @property
     def manifest_path(self) -> Path:
