@@ -1,20 +1,16 @@
-# Decisions
+# Decisões
 
-- Ceará 2026/3220 is the MVP. Small batches are validation only.
-- SQLite stores operational state; Parquet stores analytical data.
-- RAW inputs are immutable and excluded from Git.
-- Physical paths use short stable IDs for Windows; full identity stays in the manifest and Bronze.
-- Data and SQLite state may live on another local volume through `TSE_DATA_DIR` and
-  `TSE_METADATA_DIR`; the repository remains portable and data stays unversioned.
-- Discovery accepts official `tp: "log"`, `.logjez` and `-log.jez` names.
-- Extraction supports ZIP and 7-Zip containers with safe member paths.
-- Bronze is deterministic and batched; quarantine is per batch; compaction is separate.
-- Silver has separate event and section-coverage datasets so unpublished sections remain
-  explicit without creating synthetic events.
-- Silver preserves the timestamp recorded by the voting machine. Events outside the election
-  year are flagged and receive a null validated timestamp; timestamps are never guessed.
-- Each compacted Bronze part is a restartable Silver batch with an atomic output and a source
-  fingerprint checkpoint. Partition success is recorded only after all batches complete.
-- Empty-section refreshes have a persisted run ID in SQLite. Successful sections are marked per
-  run, so bounded retries resume instead of querying the first empty sections again.
-- Dashboard starts only after full Ceará processing, quality validation and a stable analytical schema.
+- O recorte do MVP é Ceará, eleição 2026, pleito 3220.
+- SQLite guarda estado operacional; Parquet guarda dados analíticos.
+- RAW é imutável e nenhum dado gerado entra no Git.
+- `TSE_DATA_DIR` e `TSE_METADATA_DIR` permitem usar outro volume sem alterar
+  checkpoints.
+- O discovery aceita os nomes `.logjez` e `*-log.jez` publicados pelo TSE.
+- A extração trata contêineres ZIP e 7-Zip e rejeita caminhos inseguros.
+- Bronze e Silver são processadas em lotes atômicos e retomáveis.
+- Seções sem arquivo permanecem na tabela Silver de cobertura; não são criados
+  eventos artificiais.
+- Timestamps fora do ano eleitoral são preservados, sinalizados e excluídos da
+  coluna temporal validada.
+- Cada ciclo de reconsulta das seções vazias tem checkpoint próprio no SQLite.
+- O dashboard começa somente depois da publicação do dataset.

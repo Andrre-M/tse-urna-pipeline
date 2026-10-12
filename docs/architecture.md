@@ -2,9 +2,11 @@
 
 ## Decisão central
 
-O MVP é o **Ceará completo**. A seção isolada existe somente para teste, debug e validação de formato.
+O MVP é o Ceará completo. A seção isolada existe somente para teste, depuração e
+validação de formato.
 
-O TSE é a source of truth. O pipeline mantém checkpoints locais suficientes para retomar discovery, ingestão e transformação sem reprocessar trabalho concluído.
+O TSE é a fonte oficial. Checkpoints locais permitem retomar discovery, ingestão
+e transformação sem repetir trabalho concluído.
 
 ```text
                            ┌──────────────────┐
@@ -133,25 +135,13 @@ de publicação não seja confundida com falha do pipeline.
 Em `events`, `event_timestamp_recorded` preserva exatamente o horário do Bronze.
 `timestamp_status` indica se o ano registrado coincide com o ano eleitoral e
 `event_timestamp_validated` só é preenchido nessa condição. Não há correção ou
-clamp sem uma fonte oficial capaz de determinar o horário pretendido. Assim, os
+ajuste forçado sem uma fonte oficial capaz de determinar o horário pretendido. Assim, os
 316 registros fora de 2026 continuam auditáveis, mas ficam fora de séries
 temporais baseadas na coluna validada.
 
 Cada parte compactada do Bronze é um lote determinístico da Silver. O resultado
 é escrito em arquivo temporário, promovido atomicamente e acompanhado de um
-checkpoint com o fingerprint da fonte. Reexecuções reutilizam lotes concluídos;
+checkpoint com a assinatura da fonte. Reexecuções reutilizam lotes concluídos;
 `--limit` restringe somente lotes pendentes. O `_SUCCESS.json` da partição só é
 publicado quando todas as fontes esperadas e a cobertura de seções estão
 concluídas.
-
-## Escala
-
-A estratégia é:
-
-1. validar uma seção real;
-2. executar discovery do Ceará inteiro;
-3. executar o piloto real (concluído: 5 arquivos, 31.947 eventos, zero rejeições);
-4. processar Ceará inteiro ponta a ponta;
-5. construir e validar a Silver reiniciável;
-6. publicar o dataset antes de qualquer dashboard;
-7. somente então decidir se Brasil inteiro agrega valor ao portfólio.
