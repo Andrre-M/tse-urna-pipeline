@@ -37,7 +37,12 @@ v0.4. Full Ceará Silver completed and validated.
   null validated timestamps and no loss of recorded values.
 - Silver events contain 8 Parquets totaling 2,630,037,414 bytes. The `D:` volume
   currently has 354.5 GiB free.
-- Local: 39 tests passing; Ruff clean.
+- Empty-section refresh cycle 1 rechecked all 1,885 unpublished sections. No new
+  files were found; the manifest remains at 23,765 files and zero pending downloads.
+- Silver coverage was refreshed and all 8 event batches were reused. The completed
+  invariants remain 143,703,249 events, 23,765 event sections and 316 temporal
+  outliers.
+- Local: 40 tests passing; Ruff clean.
 
 ## Ready
 
@@ -46,6 +51,7 @@ v0.4. Full Ceará Silver completed and validated.
 - ZIP/7-Zip `.jez` extraction and `logd.dat` parser.
 - Batched Parquet Bronze, quarantine and compaction.
 - Batched, atomic and restartable Silver events plus full section coverage.
+- Restartable empty-section refresh cycles with per-section SQLite checkpoints.
 - Limits per CLI stage, tests, lockfile and CI.
 
 ## Missing
@@ -54,9 +60,7 @@ v0.4. Full Ceará Silver completed and validated.
 
 ## Next
 
-1. Recheck the 1,885 empty sections with bounded `--refresh-empty` before publication.
-2. If the refresh discovers files, process only that delta and rebuild the affected
-   downstream checkpoints.
-3. Publish the dataset before any dashboard work.
+1. Define the dataset publication target and package.
+2. Publish the dataset before any dashboard work.
 
 Quality report: `docs/quality_report_ce_2026_3220.md`.
