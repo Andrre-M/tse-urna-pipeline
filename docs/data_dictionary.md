@@ -41,6 +41,7 @@ Partição física: `data/silver/events/year=<ano>/pleito=<pleito>/uf=<uf>`.
 | `section` | string | Seção eleitoral, 4 dígitos |
 | `source_hash` | string | Identificador publicado no arquivo auxiliar do TSE |
 | `source_file` | string | Nome do arquivo de urna de origem |
+| `source_log_member` | string | Caminho interno do `logd.dat` no arquivo extraído, sem diretório local |
 | `line_number` | int | Linha no `logd.dat` de origem |
 | `event_timestamp_recorded` | datetime | Horário preservado exatamente como registrado pela urna |
 | `event_year_recorded` | int | Ano derivado do horário registrado |

@@ -176,6 +176,22 @@ class Manifest:
                 (int(year), str(pleito), uf.lower()),
             ).fetchall()
 
+    def section_coverage_rows(
+        self, *, year: int, pleito: str | int, uf: str
+    ) -> list[sqlite3.Row]:
+        self.init()
+        with self.connect() as conn:
+            return conn.execute(
+                """
+                SELECT election_year, pleito, uf, municipality, zone, section,
+                       discovery_status, files_found, discovered_at
+                FROM sections
+                WHERE election_year=? AND pleito=? AND uf=?
+                ORDER BY municipality, zone, section
+                """,
+                (int(year), str(pleito), uf.lower()),
+            ).fetchall()
+
     def upsert_discovered(self, files: Iterable[DiscoveredFile]) -> int:
         rows = list(files)
         if not rows:

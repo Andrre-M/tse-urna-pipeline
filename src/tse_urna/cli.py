@@ -22,6 +22,7 @@ from tse_urna.preflight import run_preflight
 from tse_urna.quality.report import build_quality_summary, write_quality_report
 from tse_urna.transformation.bronze import build_bronze_batch
 from tse_urna.transformation.compaction import compact_bronze_partition
+from tse_urna.transformation.silver import build_section_coverage, build_silver_events
 
 app = typer.Typer(no_args_is_help=True, help="Pipeline de logs públicos de urnas do TSE.")
 
@@ -40,6 +41,7 @@ def init_project() -> None:
         settings.data_dir / "bronze",
         settings.data_dir / "bronze_compacted",
         settings.data_dir / "quarantine",
+        settings.data_dir / "silver",
         settings.metadata_dir,
     ]:
         path.mkdir(parents=True, exist_ok=True)
@@ -338,6 +340,48 @@ def compact_bronze(
         target_size_mb=target_size_mb,
     )
     typer.echo(f"{len(outputs)} Parquet(s) compactado(s) para {year}/{pleito}/{uf}.")
+
+
+@app.command("silver")
+def silver(
+    year: int = typer.Option(...),
+    pleito: str = typer.Option(...),
+    uf: str = typer.Option(...),
+    limit: int | None = typer.Option(
+        None, min=1, help="Limita os lotes Bronze pendentes nesta execução."
+    ),
+) -> None:
+    """Constrói eventos e cobertura Silver em lotes reiniciáveis."""
+    uf = uf.upper()
+    partition = Path(f"year={year}") / f"pleito={pleito}" / f"uf={uf}"
+    manifest = _manifest()
+    coverage = build_section_coverage(
+        rows=manifest.section_coverage_rows(year=year, pleito=pleito, uf=uf),
+        output_dir=settings.data_dir / "silver" / "section_coverage" / partition,
+    )
+    result = build_silver_events(
+        input_dir=settings.data_dir / "bronze_compacted" / partition,
+        output_dir=settings.data_dir / "silver" / "events" / partition,
+        election_year=year,
+        coverage_fingerprint=coverage.fingerprint,
+        expected_published_sections=coverage.published_sections,
+        limit=limit,
+    )
+    typer.echo(
+        f"Cobertura: {coverage.rows} seções, {coverage.published_sections} publicadas, "
+        f"{coverage.unpublished_sections} sem arquivo."
+    )
+    typer.echo(
+        f"Silver: {result.processed_batches} lote(s) processado(s), "
+        f"{result.reused_batches} reutilizado(s), "
+        f"{result.remaining_batches} pendente(s)."
+    )
+    if result.event_rows is not None:
+        typer.echo(
+            f"Silver concluída: {result.event_rows} eventos, "
+            f"{result.distinct_sections} seções, "
+            f"{result.temporal_outlier_rows} timestamp(s) fora de {year}."
+        )
 
 
 @app.command("quality-report")

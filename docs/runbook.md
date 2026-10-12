@@ -45,7 +45,18 @@ uv run urna-etl extract --limit 500
 uv run urna-etl bronze --limit 500 --batch-files 100 --target-rows 250000
 uv run urna-etl compact-bronze --year 2026 --pleito 3220 --uf CE
 uv run urna-etl quality-report --year 2026 --pleito 3220 --uf CE
+uv run urna-etl silver --year 2026 --pleito 3220 --uf CE --limit 1
 uv run urna-etl status
+```
+
+Repeat `silver --limit 1` until it reports zero pending batches. Completed source
+parts are reused. Omit `--limit` only after a bounded validation has succeeded.
+
+Silver writes two datasets:
+
+```text
+data/silver/events/year=2026/pleito=3220/uf=CE
+data/silver/section_coverage/year=2026/pleito=3220/uf=CE
 ```
 
 Refresh sections that previously had no logs:
