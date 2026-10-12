@@ -9,4 +9,10 @@
 - Discovery accepts official `tp: "log"`, `.logjez` and `-log.jez` names.
 - Extraction supports ZIP and 7-Zip containers with safe member paths.
 - Bronze is deterministic and batched; quarantine is per batch; compaction is separate.
+- Silver has separate event and section-coverage datasets so unpublished sections remain
+  explicit without creating synthetic events.
+- Silver preserves the timestamp recorded by the voting machine. Events outside the election
+  year are flagged and receive a null validated timestamp; timestamps are never guessed.
+- Each compacted Bronze part is a restartable Silver batch with an atomic output and a source
+  fingerprint checkpoint. Partition success is recorded only after all batches complete.
 - Dashboard starts only after full Ceará processing, quality validation and a stable analytical schema.
