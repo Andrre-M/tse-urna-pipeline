@@ -24,7 +24,7 @@
 - [x] Limite de execução para testes (`--limit`)
 - [x] Cache do catálogo estadual
 - [x] Validação end-to-end contra o TSE real (piloto de 5 seções)
-- [ ] Métricas completas de discovery/ingestão
+- [x] Métricas completas de discovery/ingestão
 
 ## v0.3 — processamento eficiente do Ceará
 
@@ -32,7 +32,7 @@
 - [x] Evitar small files
 - [x] Compaction por partição lógica
 - [x] Quarantine particionada
-- [ ] Relatório de qualidade da UF
+- [x] Relatório de qualidade da UF
 - [ ] Benchmark de memória, disco e tempo
 - [ ] Silver normalizada
 

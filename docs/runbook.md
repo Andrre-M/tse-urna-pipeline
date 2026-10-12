@@ -44,6 +44,7 @@ uv run urna-etl ingest --limit 500
 uv run urna-etl extract --limit 500
 uv run urna-etl bronze --limit 500 --batch-files 100 --target-rows 250000
 uv run urna-etl compact-bronze --year 2026 --pleito 3220 --uf CE
+uv run urna-etl quality-report --year 2026 --pleito 3220 --uf CE
 uv run urna-etl status
 ```
 

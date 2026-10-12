@@ -69,10 +69,17 @@ Validado contra o TSE em 6 de outubro de 2026:
 
 Ainda falta antes de considerar o Ceará inteiro concluído:
 
-- executar discovery, ingestão, extração e Bronze nas 25.650 seções;
-- relatório de qualidade por UF;
 - Silver normalizada;
 - publicação do dataset.
+
+Processamento completo validado em 12 de outubro de 2026:
+
+- 25.650 seções consultadas e 23.765 arquivos processados;
+- 143.703.249 eventos válidos, zero quarantine e zero nulos críticos;
+- qualidade `PASS WITH WARNINGS` por 1.885 seções sem arquivo publicado e 316
+  timestamps fora de 2026.
+
+Veja o [`relatório de qualidade`](docs/quality_report_ce_2026_3220.md).
 
 ## Instalação
 
