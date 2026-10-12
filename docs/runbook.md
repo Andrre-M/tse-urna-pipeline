@@ -2,6 +2,14 @@
 
 ## Setup
 
+To keep generated data and checkpoints on another Windows volume, set both variables
+in the PowerShell session before running any command:
+
+```powershell
+$env:TSE_DATA_DIR = 'D:\tse-urna-pipeline\data'
+$env:TSE_METADATA_DIR = 'D:\tse-urna-pipeline\metadata'
+```
+
 ```powershell
 uv sync --locked --extra dev
 uv run ruff check .

@@ -1,6 +1,6 @@
 # Project state
 
-Updated: 2026-10-09
+Updated: 2026-10-12
 
 ## Status
 
@@ -14,10 +14,13 @@ v0.3. Bounded processing validated beyond the pilot. Full Ceará run not started
 - Bounded discovery checkpoint: 1,934 sections completed, 1,816 logs found and
   23,716 sections pending.
 - Bounded file checkpoint: 720 files completed through Bronze; 1,096 discovered
-  files remain pending for download.
+  files remain before Bronze (426 downloaded and 670 pending download).
 - Bounded result: 4,185,149 valid events, zero quarantined lines and one compacted
   Parquet (58,097,587 bytes).
-- Current generated data uses 0.551 GiB; 22.2 GiB remained free after the batch.
+- Operational storage was copied and verified at `D:\tse-urna-pipeline`; the original
+  `C:` copy remains intact. The `D:` volume has 392.6 GiB free.
+- `TSE_DATA_DIR` and `TSE_METADATA_DIR` are supported and configured in the user
+  environment to use the `D:` paths.
 - Real-run regressions fixed for unpublished `aux.json` (404), gzip-encoded TSE
   downloads and transient Windows directory locks.
 - Local: 34 tests passing; Ruff clean.

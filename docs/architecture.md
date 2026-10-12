@@ -74,6 +74,10 @@ parse:    pending → parsed     | failed
 
 SQLite foi escolhido para o estado operacional porque é local, transacional, gratuito e suficiente para metadados. Ele não é o warehouse analítico.
 
+Os diretórios de dados e estado podem ficar fora do checkout por meio de
+`TSE_DATA_DIR` e `TSE_METADATA_DIR`. Isso permite usar outro volume sem alterar a
+identidade dos checkpoints nem versionar dados gerados.
+
 ## Idempotência
 
 A URL da seção e a URL de cada arquivo são `UNIQUE`. Reexecutar discovery atualiza metadados sem duplicar registros.

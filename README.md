@@ -93,6 +93,14 @@ pip install -e ".[dev]"
 
 ## Primeira execução recomendada
 
+Por padrão, dados e checkpoints ficam em `data/` e `metadata/`. Para usar outro
+volume no PowerShell:
+
+```powershell
+$env:TSE_DATA_DIR = 'D:\tse-urna-pipeline\data'
+$env:TSE_METADATA_DIR = 'D:\tse-urna-pipeline\metadata'
+```
+
 Antes de processar o Ceará inteiro, valide o pipeline em um lote pequeno:
 
 ```bash
