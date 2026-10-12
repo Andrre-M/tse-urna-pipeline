@@ -144,23 +144,3 @@ def build_bronze_batch(
         quarantine_temp.unlink(missing_ok=True)
         if staging.exists():
             shutil.rmtree(staging, ignore_errors=True)
-
-
-def build_bronze(
-    *,
-    log_path: Path,
-    output_path: Path,
-    quarantine_path: Path,
-    metadata: dict[str, str | int],
-) -> tuple[int, int]:
-    """Compatibilidade para a API por arquivo usada nas versões 0.1/0.2."""
-    result = build_bronze_batch(
-        logs=[(log_path, metadata)],
-        output_dir=output_path.parent / f"batch={output_path.stem}",
-        quarantine_path=quarantine_path,
-        target_rows=250_000,
-    )
-    generated = Path(result.output_files[0])
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(generated, output_path)
-    return result.valid_rows, result.rejected_rows
