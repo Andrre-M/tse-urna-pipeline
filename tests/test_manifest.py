@@ -51,10 +51,48 @@ def test_section_manifest_is_resumable(tmp_path: Path):
     assert len(remaining) == 1
     assert remaining[0]["section"] == "0445"
 
+    refresh = manifest.start_or_resume_empty_refresh(year=2026, pleito=3220, uf="CE")
     refreshable = manifest.pending_sections(
-        year=2026, pleito=3220, uf="CE", refresh_empty=True
+        year=2026, pleito=3220, uf="CE", refresh_run_id=refresh["id"]
     )
     assert {row["section"] for row in refreshable} == {"0444", "0445"}
+
+
+def test_empty_section_refresh_resumes_after_completed_rows(tmp_path: Path):
+    from tse_urna.discovery.urls import section_aux_url
+
+    manifest = Manifest(tmp_path / "manifest.db")
+    refs = [
+        SectionRef.build(
+            year=2026, pleito=3220, uf="CE", municipality=13897, zone=3, section=section
+        )
+        for section in (444, 445, 446)
+    ]
+    manifest.upsert_sections(
+        (ref, section_aux_url(base_url="https://example.test", section=ref))
+        for ref in refs
+    )
+    for row in manifest.pending_sections(year=2026, pleito=3220, uf="CE"):
+        manifest.mark_section_discovered(row["id"], files_found=0, http_status=404)
+
+    refresh = manifest.start_or_resume_empty_refresh(year=2026, pleito=3220, uf="CE")
+    first = manifest.pending_sections(
+        year=2026, pleito=3220, uf="CE", limit=1, refresh_run_id=refresh["id"]
+    )[0]
+    manifest.mark_section_discovered(
+        first["id"], files_found=0, http_status=404, refresh_run_id=refresh["id"]
+    )
+
+    resumed = manifest.start_or_resume_empty_refresh(year=2026, pleito=3220, uf="CE")
+    remaining = manifest.pending_sections(
+        year=2026, pleito=3220, uf="CE", refresh_run_id=resumed["id"]
+    )
+
+    assert resumed["id"] == refresh["id"]
+    assert {row["section"] for row in remaining} == {"0445", "0446"}
+    assert manifest.empty_refresh_remaining(
+        refresh_run_id=refresh["id"], year=2026, pleito=3220, uf="CE"
+    ) == 2
 
 
 def test_file_stage_queries_support_limit(tmp_path: Path):

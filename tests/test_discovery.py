@@ -42,8 +42,9 @@ def test_discovery_treats_missing_aux_as_refreshable_empty_section(tmp_path: Pat
     assert calls == 1
     assert manifest.pending_sections(year=2026, pleito=3220, uf="CE") == []
 
+    refresh = manifest.start_or_resume_empty_refresh(year=2026, pleito=3220, uf="CE")
     refreshable = manifest.pending_sections(
-        year=2026, pleito=3220, uf="CE", refresh_empty=True
+        year=2026, pleito=3220, uf="CE", refresh_run_id=refresh["id"]
     )
     assert len(refreshable) == 1
     assert refreshable[0]["http_status"] == 404

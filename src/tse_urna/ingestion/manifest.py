@@ -30,6 +30,19 @@ CREATE TABLE IF NOT EXISTS sections (
 CREATE INDEX IF NOT EXISTS idx_sections_discovery
 ON sections(election_year, pleito, uf, discovery_status);
 
+CREATE TABLE IF NOT EXISTS section_refresh_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    election_year INTEGER NOT NULL,
+    pleito TEXT NOT NULL,
+    uf TEXT NOT NULL,
+    baseline_empty_sections INTEGER NOT NULL,
+    started_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    completed_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_section_refresh_runs_partition
+ON section_refresh_runs(election_year, pleito, uf, completed_at);
+
 CREATE TABLE IF NOT EXISTS files (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     election_year INTEGER NOT NULL,
@@ -79,6 +92,11 @@ class Manifest:
             conn.execute("PRAGMA journal_mode = WAL")
             conn.execute("PRAGMA synchronous = NORMAL")
             conn.executescript(DDL)
+            columns = {
+                row[1] for row in conn.execute("PRAGMA table_info(sections)").fetchall()
+            }
+            if "last_refresh_id" not in columns:
+                conn.execute("ALTER TABLE sections ADD COLUMN last_refresh_id INTEGER")
 
     def upsert_sections(self, sections: Iterable[tuple[object, str]]) -> int:
         rows = list(sections)
@@ -116,7 +134,7 @@ class Manifest:
         pleito: str | int,
         uf: str,
         limit: int | None = None,
-        refresh_empty: bool = False,
+        refresh_run_id: int | None = None,
     ) -> list[sqlite3.Row]:
         self.init()
         sql = """
@@ -124,11 +142,22 @@ class Manifest:
             WHERE election_year=? AND pleito=? AND uf=?
               AND (
                 discovery_status IN ('pending', 'failed')
-                OR (? AND discovery_status='discovered' AND files_found=0)
+                OR (
+                    ? IS NOT NULL
+                    AND discovery_status='discovered'
+                    AND files_found=0
+                    AND COALESCE(last_refresh_id, 0) != ?
+                )
               )
             ORDER BY municipality, zone, section
         """
-        params: list[object] = [int(year), str(pleito), uf.lower(), int(refresh_empty)]
+        params: list[object] = [
+            int(year),
+            str(pleito),
+            uf.lower(),
+            refresh_run_id,
+            refresh_run_id,
+        ]
         if limit is not None:
             sql += " LIMIT ?"
             params.append(int(limit))
@@ -136,17 +165,87 @@ class Manifest:
             return conn.execute(sql, params).fetchall()
 
     def mark_section_discovered(
-        self, record_id: int, *, files_found: int, http_status: int
+        self,
+        record_id: int,
+        *,
+        files_found: int,
+        http_status: int,
+        refresh_run_id: int | None = None,
     ) -> None:
         with self.connect() as conn:
             conn.execute(
                 """
                 UPDATE sections SET discovery_status='discovered', attempts=attempts+1,
                     files_found=?, http_status=?, error=NULL, discovered_at=CURRENT_TIMESTAMP,
+                    last_refresh_id=COALESCE(?, last_refresh_id),
                     updated_at=CURRENT_TIMESTAMP
                 WHERE id=?
                 """,
-                (files_found, http_status, record_id),
+                (files_found, http_status, refresh_run_id, record_id),
+            )
+
+    def start_or_resume_empty_refresh(
+        self, *, year: int, pleito: str | int, uf: str
+    ) -> sqlite3.Row:
+        self.init()
+        partition = (int(year), str(pleito), uf.lower())
+        with self.connect() as conn:
+            active = conn.execute(
+                """
+                SELECT * FROM section_refresh_runs
+                WHERE election_year=? AND pleito=? AND uf=? AND completed_at IS NULL
+                ORDER BY id DESC LIMIT 1
+                """,
+                partition,
+            ).fetchone()
+            if active is not None:
+                return active
+            baseline = conn.execute(
+                """
+                SELECT COUNT(*) FROM sections
+                WHERE election_year=? AND pleito=? AND uf=?
+                  AND discovery_status='discovered' AND files_found=0
+                """,
+                partition,
+            ).fetchone()[0]
+            cursor = conn.execute(
+                """
+                INSERT INTO section_refresh_runs (
+                    election_year, pleito, uf, baseline_empty_sections
+                ) VALUES (?, ?, ?, ?)
+                """,
+                (*partition, int(baseline)),
+            )
+            return conn.execute(
+                "SELECT * FROM section_refresh_runs WHERE id=?", (cursor.lastrowid,)
+            ).fetchone()
+
+    def empty_refresh_remaining(
+        self, *, refresh_run_id: int, year: int, pleito: str | int, uf: str
+    ) -> int:
+        self.init()
+        with self.connect() as conn:
+            return int(
+                conn.execute(
+                    """
+                    SELECT COUNT(*) FROM sections
+                    WHERE election_year=? AND pleito=? AND uf=?
+                      AND files_found=0
+                      AND discovery_status IN ('discovered', 'failed')
+                      AND COALESCE(last_refresh_id, 0) != ?
+                    """,
+                    (int(year), str(pleito), uf.lower(), int(refresh_run_id)),
+                ).fetchone()[0]
+            )
+
+    def complete_empty_refresh(self, refresh_run_id: int) -> None:
+        with self.connect() as conn:
+            conn.execute(
+                """
+                UPDATE section_refresh_runs SET completed_at=CURRENT_TIMESTAMP
+                WHERE id=? AND completed_at IS NULL
+                """,
+                (int(refresh_run_id),),
             )
 
     def mark_section_discovery_failed(

@@ -62,6 +62,12 @@ pending → discovered | failed
 
 Isso torna o discovery do Ceará reiniciável: uma execução interrompida não precisa consultar novamente as seções já concluídas.
 
+Reconsultas de seções vazias usam um ciclo persistido em
+`section_refresh_runs`. Cada ciclo recebe um ID e a seção registra
+`last_refresh_id` somente após uma consulta bem-sucedida. Um comando
+interrompido retoma as seções ainda sem esse ID; falhas continuam pendentes e
+um novo ciclo só começa depois que o anterior é concluído.
+
 ### `files`
 
 Registra cada `.logjez` encontrado e controla os estágios posteriores.

@@ -20,6 +20,7 @@ async def _discover_one(
     row,
     base_url: str,
     retries: int = 4,
+    refresh_run_id: int | None = None,
 ) -> bool:
     last_error: Exception | None = None
     last_status: int | None = None
@@ -33,7 +34,10 @@ async def _discover_one(
             last_status = response.status_code
             if response.status_code == 404:
                 manifest.mark_section_discovered(
-                    row["id"], files_found=0, http_status=response.status_code
+                    row["id"],
+                    files_found=0,
+                    http_status=response.status_code,
+                    refresh_run_id=refresh_run_id,
                 )
                 return True
             response.raise_for_status()
@@ -50,7 +54,10 @@ async def _discover_one(
             discovered = parse_aux_json(payload, base_url=base_url, section=section)
             manifest.upsert_discovered(discovered)
             manifest.mark_section_discovered(
-                row["id"], files_found=len(discovered), http_status=last_status
+                row["id"],
+                files_found=len(discovered),
+                http_status=last_status,
+                refresh_run_id=refresh_run_id,
             )
             return True
         except (httpx.HTTPError, ValueError, KeyError) as exc:
@@ -80,10 +87,14 @@ async def discover_pending_sections(
     timeout_seconds: float,
     retries: int = 4,
     limit: int | None = None,
-    refresh_empty: bool = False,
+    refresh_run_id: int | None = None,
 ) -> StageStats:
     rows = manifest.pending_sections(
-        year=year, pleito=pleito, uf=uf, limit=limit, refresh_empty=refresh_empty
+        year=year,
+        pleito=pleito,
+        uf=uf,
+        limit=limit,
+        refresh_run_id=refresh_run_id,
     )
     if not rows:
         return StageStats(processed=0, succeeded=0)
@@ -103,6 +114,7 @@ async def discover_pending_sections(
                     row=row,
                     base_url=base_url,
                     retries=retries,
+                    refresh_run_id=refresh_run_id,
                 )
                 for row in rows
             ]

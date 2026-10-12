@@ -15,4 +15,6 @@
   year are flagged and receive a null validated timestamp; timestamps are never guessed.
 - Each compacted Bronze part is a restartable Silver batch with an atomic output and a source
   fingerprint checkpoint. Partition success is recorded only after all batches complete.
+- Empty-section refreshes have a persisted run ID in SQLite. Successful sections are marked per
+  run, so bounded retries resume instead of querying the first empty sections again.
 - Dashboard starts only after full Ceará processing, quality validation and a stable analytical schema.

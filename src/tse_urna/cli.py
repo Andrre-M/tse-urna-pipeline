@@ -124,6 +124,17 @@ def discover_uf(
         typer.echo("Catálogo concluído; consulta dos aux.json não executada.")
         return
 
+    refresh_run = (
+        manifest.start_or_resume_empty_refresh(year=year, pleito=pleito, uf=uf)
+        if refresh_empty
+        else None
+    )
+    if refresh_run is not None:
+        typer.echo(
+            f"Refresh vazio #{refresh_run['id']}: "
+            f"baseline={refresh_run['baseline_empty_sections']} seção(ões)."
+        )
+
     stats = asyncio.run(
         discover_pending_sections(
             manifest=manifest,
@@ -136,7 +147,7 @@ def discover_uf(
             timeout_seconds=settings.timeout_seconds,
             retries=settings.retries,
             limit=limit,
-            refresh_empty=refresh_empty,
+            refresh_run_id=refresh_run["id"] if refresh_run is not None else None,
         )
     )
     typer.echo(f"Discovery: {stats.succeeded}/{stats.processed} seção(ões) concluída(s).")
@@ -146,6 +157,15 @@ def discover_uf(
             f"discovery={row['discovery_status']:<10} total={row['total']} "
             f"logjez={row['files_found'] or 0}"
         )
+    if refresh_run is not None:
+        remaining = manifest.empty_refresh_remaining(
+            refresh_run_id=refresh_run["id"], year=year, pleito=pleito, uf=uf
+        )
+        if remaining == 0 and not stats.failed:
+            manifest.complete_empty_refresh(refresh_run["id"])
+            typer.echo(f"Refresh vazio #{refresh_run['id']} concluído.")
+        else:
+            typer.echo(f"Refresh vazio #{refresh_run['id']}: {remaining} pendente(s).")
     if stats.failed:
         raise typer.Exit(code=1)
 

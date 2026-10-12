@@ -62,8 +62,12 @@ data/silver/section_coverage/year=2026/pleito=3220/uf=CE
 Refresh sections that previously had no logs:
 
 ```powershell
-uv run urna-etl discover-uf --year 2026 --pleito 3220 --uf CE --refresh-empty --limit 1000
+uv run urna-etl discover-uf --year 2026 --pleito 3220 --uf CE --refresh-empty --limit 250
 ```
+
+Repeat the command until it reports that the numbered empty-section refresh is
+complete. Its persisted refresh ID prevents completed empty sections from being
+queried again after an interruption.
 
 ## Failure
 
