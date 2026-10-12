@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 from collections import defaultdict
 from pathlib import Path
+from typing import Annotated
 
 import httpx
 import typer
@@ -18,6 +19,7 @@ from tse_urna.ingestion.downloader import download_pending
 from tse_urna.ingestion.manifest import Manifest
 from tse_urna.models import SectionRef
 from tse_urna.preflight import run_preflight
+from tse_urna.quality.report import build_quality_summary, write_quality_report
 from tse_urna.transformation.bronze import build_bronze_batch
 from tse_urna.transformation.compaction import compact_bronze_partition
 
@@ -336,6 +338,45 @@ def compact_bronze(
         target_size_mb=target_size_mb,
     )
     typer.echo(f"{len(outputs)} Parquet(s) compactado(s) para {year}/{pleito}/{uf}.")
+
+
+@app.command("quality-report")
+def quality_report(
+    year: int = typer.Option(...),
+    pleito: str = typer.Option(...),
+    uf: str = typer.Option(...),
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            help="Caminho Markdown; por padrão usa docs/quality_report_<uf>_<ano>_<pleito>.md."
+        ),
+    ] = None,
+) -> None:
+    """Valida cobertura, completude e integridade do Bronze compactado."""
+    uf = uf.upper()
+    partition = Path(f"year={year}") / f"pleito={pleito}" / f"uf={uf}"
+    output_path = output or Path(
+        f"docs/quality_report_{uf.lower()}_{year}_{pleito}.md"
+    )
+    summary = build_quality_summary(
+        manifest=_manifest(),
+        compacted_dir=settings.data_dir / "bronze_compacted" / partition,
+        quarantine_dir=settings.data_dir / "quarantine" / partition,
+        year=year,
+        pleito=pleito,
+        uf=uf,
+    )
+    write_quality_report(
+        summary, output_path=output_path, year=year, pleito=pleito, uf=uf
+    )
+    status = "PASS WITH WARNINGS" if summary.has_warnings else "PASS"
+    typer.echo(
+        f"{status if summary.passed else 'FAIL'}: {summary.valid_rows} eventos, "
+        f"{summary.rejected_rows} quarantine, {summary.completed_files} arquivos."
+    )
+    typer.echo(f"Relatório: {output_path.resolve()}")
+    if not summary.passed:
+        raise typer.Exit(code=1)
 
 
 @app.command("status")
