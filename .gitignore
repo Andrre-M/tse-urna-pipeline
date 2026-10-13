@@ -28,6 +28,7 @@ dist/
 
 # Secrets / local config
 .env
+/*.local.md
 
 # IDE / OS
 .vscode/

@@ -1,160 +1,66 @@
 # Arquitetura
 
-## Decisão central
-
-O MVP é o Ceará completo. A seção isolada existe somente para teste, depuração e
-validação de formato.
-
-O TSE é a fonte oficial. Checkpoints locais permitem retomar discovery, ingestão
-e transformação sem repetir trabalho concluído.
+## Fluxo
 
 ```text
-                           ┌──────────────────┐
-                           │       TSE        │
-                           └────────┬─────────┘
-                                    │
-                         catálogo UF│ *-cs.json
-                                    ▼
-                           ┌──────────────────┐
-                           │ Sections manifest│
-                           │ CE inteiro       │
-                           └────────┬─────────┘
-                                    │
-                         discovery │ -aux.json
-                                    ▼
-                           ┌──────────────────┐
-                           │ Files manifest   │
-                           │ .logjez          │
-                           └────────┬─────────┘
-                                    │
-                         ingestion │
-                                    ▼
-                           ┌──────────────────┐
-                           │ RAW imutável     │
-                           └────────┬─────────┘
-                                    │
-                         extraction│ 7-Zip
-                                    ▼
-                           ┌──────────────────┐
-                           │ logd.dat         │
-                           └────────┬─────────┘
-                                    │
-                            parsing│
-                                    ▼
-                           ┌──────────────────┐
-                           │ Bronze Parquet   │
-                           └────────┬─────────┘
-                                    │
-                    quality/compact│ normalize
-                                    ▼
-                           ┌──────────────────┐
-                           │ Silver Parquet   │
-                           └────────┬─────────┘
-                                    │ publicação manual validada
-                                    ▼
-                           ┌──────────────────┐
-                           │ Dataset público  │
-                           └──────────────────┘
+catálogo estadual
+       │
+       ▼
+discovery por seção ──► manifest SQLite
+       │
+       ▼
+    RAW imutável
+       │
+       ▼
+extração do logd.dat
+       │
+       ▼
+ Bronze + quarantine
+       │
+       ▼
+ compactação e qualidade
+       │
+       ▼
+ Silver events + section_coverage
 ```
 
-## Manifest em dois níveis
+O catálogo estadual define o universo de seções. Para cada seção, o discovery
+consulta o `aux.json` e registra os arquivos de urna encontrados. O SQLite
+guarda o andamento das etapas; os dados permanecem em arquivos.
 
-### `sections`
+## Armazenamento
 
-Registra toda seção eleitoral descoberta no catálogo estadual e o estado da consulta de seu `aux.json`.
+Os diretórios podem ser configurados por `TSE_DATA_DIR` e
+`TSE_METADATA_DIR`. Isso permite manter os dados em outro volume sem colocar
+arquivos gerados no repositório.
 
-```text
-pending → discovered | failed
-```
+O RAW é imutável. Bronze e Silver usam Parquet com compressão Zstandard. Linhas
+que o parser não reconhece são gravadas em quarantine com arquivo, número da
+linha, conteúdo e motivo.
 
-Isso torna o discovery do Ceará reiniciável: uma execução interrompida não precisa consultar novamente as seções já concluídas.
+## Retomada
 
-Reconsultas de seções vazias usam um ciclo persistido em
-`section_refresh_runs`. Cada ciclo recebe um ID e a seção registra
-`last_refresh_id` somente após uma consulta bem-sucedida. Um comando
-interrompido retoma as seções ainda sem esse ID; falhas continuam pendentes e
-um novo ciclo só começa depois que o anterior é concluído.
+Discovery, download, extração e transformação registram checkpoints. Os lotes
+Bronze são identificados pelas fontes que contêm e só substituem o destino após
+uma escrita completa. A Silver repete a mesma estratégia para cada parte do
+Bronze compactado.
 
-### `files`
+Reexecutar uma etapa reutiliza o que já terminou. O parâmetro `--limit` serve
+para testar e avançar em lotes menores; ele não altera a identidade das saídas.
 
-Registra cada `.logjez` encontrado e controla os estágios posteriores.
+## Cobertura
 
-```text
-download: pending → downloaded | failed
-extract:  pending → extracted  | failed
-parse:    pending → parsed     | failed
-```
+`section_coverage` tem uma linha para cada seção do catálogo. Se o TSE não
+publicou arquivo, a seção recebe `publication_status = not_published` e continua
+no denominador de cobertura. Nenhum evento é inventado para preencher essa
+ausência.
 
-SQLite foi escolhido para o estado operacional porque é local, transacional, gratuito e suficiente para metadados. Ele não é o warehouse analítico.
+As reconsultas de seções vazias têm checkpoint próprio. Se forem interrompidas,
+retomam apenas as seções ainda não consultadas naquele ciclo.
 
-Os diretórios de dados e estado podem ficar fora do checkout por meio de
-`TSE_DATA_DIR` e `TSE_METADATA_DIR`. Isso permite usar outro volume sem alterar a
-identidade dos checkpoints nem versionar dados gerados.
+## Timestamps
 
-## Idempotência
-
-A URL da seção e a URL de cada arquivo são `UNIQUE`. Reexecutar discovery atualiza metadados sem duplicar registros.
-
-Downloads existentes são reutilizados e recebem SHA-256 local. Respostas transitórias
-(`408`, `425`, `429` e `5xx`) usam retry com backoff/`Retry-After`; erros permanentes não
-consomem tentativas desnecessárias.
-
-## RAW
-
-RAW não é transformado:
-
-```text
-data/raw/y=2026/p=3220/u=CE/m=13005/z=0030/s=0082/file-00000001.jez
-```
-
-## Bronze
-
-Bronze preserva a mensagem original e acrescenta metadados de origem.
-
-O Bronze agrupa arquivos-fonte em lotes determinísticos. Cada lote escreve partes com
-quantidade-alvo de linhas e um `_SUCCESS.json`; uma interrupção antes do marcador reconstrói
-o mesmo lote sem duplicar eventos. A compactação posterior combina partes pequenas por
-`year/pleito/uf` usando execução streaming do Polars.
-
-## Quarantine
-
-Linhas não interpretadas não são descartadas. Elas mantêm arquivo-fonte, número da linha,
-conteúdo bruto e motivo em um JSONL idempotente por lote.
-
-## Silver
-
-A Silver tem dois conjuntos conformados e particionados por
-`year/pleito/uf`:
-
-- `silver/events`: um evento por linha do Bronze, com identificadores estáveis,
-  nomes normalizados e tratamento temporal explícito;
-- `silver/section_coverage`: uma linha por seção do catálogo, inclusive quando o
-  TSE não publicou arquivo de urna.
-
-`section_coverage` é a referência para denominadores e cobertura. Uma seção
-descoberta com `files_found = 0` recebe
-`publication_status = not_published`; ela não gera evento sintético nem é
-descartada. Estados `pending` e `failed` permanecem distintos para que ausência
-de publicação não seja confundida com falha do pipeline.
-
-Em `events`, `event_timestamp_recorded` preserva exatamente o horário do Bronze.
-`timestamp_status` indica se o ano registrado coincide com o ano eleitoral e
-`event_timestamp_validated` só é preenchido nessa condição. Não há correção ou
-ajuste forçado sem uma fonte oficial capaz de determinar o horário pretendido. Assim, os
-316 registros fora de 2026 continuam auditáveis, mas ficam fora de séries
-temporais baseadas na coluna validada.
-
-Cada parte compactada do Bronze é um lote determinístico da Silver. O resultado
-é escrito em arquivo temporário, promovido atomicamente e acompanhado de um
-checkpoint com a assinatura da fonte. Reexecuções reutilizam lotes concluídos;
-`--limit` restringe somente lotes pendentes. O `_SUCCESS.json` da partição só é
-publicado quando todas as fontes esperadas e a cobertura de seções estão
-concluídas.
-
-## Distribuição
-
-A publicação é deliberadamente separada do ETL. Ela envia apenas a Silver e os
-metadados de auditoria descritos em `docs/publication.md`. RAW, Bronze e SQLite
-permanecem locais. O manifesto fixa nomes, tamanhos, contagens e hashes antes do
-envio; a URL e a revisão remota só entram em `PROJECT_STATE.md` depois da
-validação pública.
+`event_timestamp_recorded` preserva o horário encontrado no log. Quando o ano
+diverge do ano eleitoral, `timestamp_status` recebe
+`outside_election_year` e as colunas temporais validadas ficam nulas. O pipeline
+não tenta adivinhar a data correta.

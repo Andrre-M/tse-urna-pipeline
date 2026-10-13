@@ -1,74 +1,69 @@
 # TSE Urna Pipeline
 
-Pipeline local para baixar e estruturar os logs públicos de urnas divulgados
-pelo Tribunal Superior Eleitoral.
+Pipeline em Python para baixar e estruturar os logs públicos de urnas divulgados
+pelo Tribunal Superior Eleitoral no
+[Portal de Dados Abertos](https://dadosabertos-novo.tse.jus.br/).
 
-O recorte atual é o Ceará, eleição de 2026, pleito 3220. O processamento foi
-concluído até a camada Silver; a publicação do dataset é a próxima etapa.
+O recorte processado neste repositório é o Ceará na eleição de 2026, pleito
+3220. A carga foi feita para todas as seções disponíveis no catálogo estadual,
+sem amostragem.
 
 ## Resultado
 
-Em 12 de outubro de 2026:
-
-- 25.650 seções consultadas;
+- 25.650 seções catalogadas;
 - 23.765 arquivos de urna processados;
-- 143.703.249 eventos na Silver;
-- 1.885 seções sem arquivo publicado, reconsultadas após a carga;
-- zero linhas em quarantine;
-- 316 timestamps fora de 2026, preservados e sinalizados;
-- qualidade `PASS WITH WARNINGS`.
+- 143.703.249 eventos na camada Silver;
+- 1.885 seções sem arquivo publicado;
+- nenhuma linha em quarentena;
+- 316 timestamps fora de 2026, preservados e sinalizados.
 
-Os detalhes estão no [relatório de qualidade](docs/quality_report_ce_2026_3220.md)
-e no [estado do projeto](PROJECT_STATE.md).
+O relatório completo está em
+[docs/quality_report_ce_2026_3220.md](docs/quality_report_ce_2026_3220.md).
 
-## Fluxo
-
-```text
-catálogo CE → discovery → RAW → extração → Bronze → qualidade → Silver
-                 │
-                 └── manifest e checkpoints em SQLite
-```
-
-O SQLite guarda apenas estado operacional. Os dados analíticos ficam em
-Parquet:
+## Organização dos dados
 
 ```text
-data/bronze_compacted/year=2026/pleito=3220/uf=CE
-data/silver/events/year=2026/pleito=3220/uf=CE
-data/silver/section_coverage/year=2026/pleito=3220/uf=CE
+catálogo → discovery → RAW → extração → Bronze → qualidade → Silver
 ```
 
-`events` contém os logs conformados. `section_coverage` mantém o catálogo
-completo, inclusive as seções para as quais o TSE não publicou arquivo.
+O RAW guarda os arquivos baixados sem transformação. A Bronze preserva os
+eventos e seus metadados de origem. A Silver oferece duas tabelas:
+
+- `events`: eventos normalizados, com identificação da seção e política
+  temporal explícita;
+- `section_coverage`: todas as seções do catálogo, inclusive as que não tinham
+  arquivo publicado.
+
+O estado operacional fica em SQLite e os dados analíticos em Parquet. Arquivos
+baixados, resultados e banco local não são versionados.
 
 ## Ambiente
 
-Requer Python 3.12 ou superior e [uv](https://docs.astral.sh/uv/).
+O projeto requer Python 3.12 ou superior e
+[uv](https://docs.astral.sh/uv/).
 
 ```powershell
 uv sync --locked --extra dev
 uv run ruff check .
 uv run pytest -q
+uv run urna-etl --help
 ```
 
-Dados e checkpoints podem ficar fora do repositório:
+Os diretórios de dados e metadados podem ficar fora do checkout:
 
 ```powershell
-$env:TSE_DATA_DIR = 'D:\tse-urna-pipeline\data'
-$env:TSE_METADATA_DIR = 'D:\tse-urna-pipeline\metadata'
+$env:TSE_DATA_DIR = 'D:\dados\tse-urna\data'
+$env:TSE_METADATA_DIR = 'D:\dados\tse-urna\metadata'
 ```
 
-O [runbook](docs/runbook.md) contém a ordem dos comandos, limites e recuperação
-de falhas. A publicação da Silver tem um procedimento separado em
-[docs/publication.md](docs/publication.md).
+O schema das camadas está em [docs/data_dictionary.md](docs/data_dictionary.md)
+e as decisões de implementação em [docs/decisions.md](docs/decisions.md).
 
-## Escolhas do projeto
+## Limites
 
-- RAW é imutável.
-- Downloads e transformações retomam de checkpoints.
-- Linhas não interpretadas vão para quarantine.
-- O timestamp registrado pela urna nunca é corrigido por inferência.
-- Dados gerados e SQLite não entram no Git.
-- Dashboard só começa depois da publicação do dataset.
+Os resultados deste recorte foram validados apenas para o Ceará em
+2026/3220. A ausência de arquivo para uma seção e os timestamps atípicos
+reproduzem o material encontrado na fonte; isoladamente, não permitem concluir
+nada sobre o processo eleitoral.
 
-O projeto é independente e não possui vínculo com o TSE.
+Este é um projeto independente e sem vínculo com o TSE.
