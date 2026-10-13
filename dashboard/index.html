@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Painel técnico dos logs públicos de urnas do Ceará, eleição 2026, pleito 3220.">
+    <title>Logs públicos de urnas — Ceará 2026</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/styles.css">
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js" defer></script>
+    <script src="assets/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Ir para o conteúdo</a>
+    <header class="site-header">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">CE</span>
+        <div>
+          <p class="eyebrow">Dados públicos • Gold reconciliada</p>
+          <p class="brand-title">Logs de urnas 2026</p>
+        </div>
+      </div>
+      <nav class="page-nav" aria-label="Páginas do painel">
+        <button class="nav-link is-active" data-page-target="overview">Visão geral</button>
+        <button class="nav-link" data-page-target="coverage">Cobertura</button>
+        <button class="nav-link" data-page-target="events">Eventos</button>
+        <button class="nav-link" data-page-target="quality">Qualidade</button>
+      </nav>
+      <a class="dataset-link" href="https://huggingface.co/datasets/Andrre-M/tse-urna-ce-2026-gold" target="_blank" rel="noreferrer">Ver dataset ↗</a>
+    </header>
+
+    <main id="main-content">
+      <div id="loading" class="loading" role="status">
+        <span class="loading-dot"></span>
+        Validando e carregando a camada Gold…
+      </div>
+      <div id="error" class="error-panel" hidden></div>
+
+      <section class="page is-active" data-page="overview" aria-labelledby="overview-title">
+        <div class="hero">
+          <div>
+            <p class="eyebrow">Ceará • eleição 2026 • pleito 3220</p>
+            <h1 id="overview-title">O que os logs publicados mostram</h1>
+            <p class="hero-copy">Uma leitura técnica de cobertura, volume e distribuição temporal. Este painel descreve registros operacionais; não contabiliza votos nem apresenta resultados eleitorais.</p>
+          </div>
+          <div class="hero-seal">
+            <span>Fonte</span>
+            <strong>TSE</strong>
+            <small>dados abertos</small>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="overview-kpis"></div>
+
+        <div class="content-grid overview-grid">
+          <article class="panel panel-wide">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Linha do tempo validada</p>
+                <h2>Eventos registrados por data</h2>
+              </div>
+              <span class="panel-note">Timestamps fora de 2026 não entram neste gráfico</span>
+            </div>
+            <div id="overview-timeline" class="chart" aria-label="Gráfico de eventos por data"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Publicação</p>
+                <h2>Cobertura das seções</h2>
+              </div>
+            </div>
+            <div id="overview-coverage" class="chart chart-compact" aria-label="Gráfico de cobertura das seções"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page" data-page="coverage" aria-labelledby="coverage-title" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">25.650 seções no catálogo</p>
+            <h1 id="coverage-title">Cobertura por município e zona</h1>
+            <p>Seções sem arquivo publicado permanecem no denominador e aparecem com zero eventos.</p>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <label>Município<select id="coverage-municipality"></select></label>
+          <label>Zona<select id="coverage-zone"></select></label>
+        </div>
+        <div class="kpi-grid kpi-grid-compact" id="coverage-kpis"></div>
+        <div class="content-grid">
+          <article class="panel">
+            <div class="panel-heading"><div><p class="eyebrow">Comparação</p><h2>Eventos por município</h2></div></div>
+            <div id="coverage-municipalities" class="chart"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><p class="eyebrow">Distribuição</p><h2>Volume por seção</h2></div></div>
+            <div id="coverage-distribution" class="chart"></div>
+          </article>
+        </div>
+        <article class="panel table-panel">
+          <div class="panel-heading"><div><p class="eyebrow">Detalhamento</p><h2>Seções do recorte</h2></div><span class="panel-note">Até 100 linhas, ordenadas por volume</span></div>
+          <div class="table-wrap"><table><thead><tr><th>Município</th><th>Zona</th><th>Seção</th><th>Status</th><th class="numeric">Eventos</th></tr></thead><tbody id="coverage-table"></tbody></table></div>
+        </article>
+      </section>
+
+      <section class="page" data-page="events" aria-labelledby="events-title" hidden>
+        <div class="page-heading">
+          <div>
+            <p class="eyebrow">143.703.249 registros agregados</p>
+            <h1 id="events-title">Distribuição dos eventos</h1>
+            <p>Explore datas, horas, severidades e aplicações preservando o significado operacional dos logs.</p>
+          </div>
+        </div>
+        <div class="filter-bar">
+          <label>Município<select id="events-municipality"></select></label>
+          <label>Zona<select id="events-zone"></select></label>
+          <label>Severidade<select id="events-severity"></select></label>
+        </div>
+        <div class="content-grid">
+          <article class="panel panel-wide">
+            <div class="panel-heading"><div><p class="eyebrow">Timestamps válidos</p><h2>Eventos por data e severidade</h2></div></div>
+            <div id="events-timeline" class="chart"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><p class="eyebrow">Ritmo diário</p><h2>Distribuição por hora</h2></div></div>
+            <div id="events-hours" class="chart"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-heading"><div><p class="eyebrow">Origem operacional</p><h2>Aplicações e severidades</h2></div></div>
+            <div id="events-applications" class="chart"></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="page" data-page="quality" aria-labelledby="quality-title" hidden>
+        <div class="page-heading quality-heading">
+          <div>
+            <p class="eyebrow">Metodologia verificável</p>
+            <h1 id="quality-title">Qualidade, limites e proveniência</h1>
+            <p>A camada Gold resume a Silver publicada sem reler arquivos brutos no navegador.</p>
+          </div>
+          <div class="status-badge"><span></span>Validação PASS</div>
+        </div>
+        <div class="method-grid">
+          <article class="method-card"><span>01</span><h2>Universo completo</h2><p>O catálogo estadual define o denominador. Seções sem arquivo continuam representadas.</p></article>
+          <article class="method-card"><span>02</span><h2>Tempo preservado</h2><p>Horários fora de 2026 são sinalizados e excluídos apenas da análise temporal validada.</p></article>
+          <article class="method-card"><span>03</span><h2>Contagens reconciliadas</h2><p>Cobertura e aplicações fecham com o total de eventos; a linha do tempo fecha com os timestamps válidos.</p></article>
+        </div>
+        <div class="content-grid quality-grid">
+          <article class="panel">
+            <div class="panel-heading"><div><p class="eyebrow">316 registros</p><h2>Timestamps por ano atípico</h2></div></div>
+            <div id="quality-outliers" class="chart chart-compact"></div>
+          </article>
+          <article class="panel caveat-panel">
+            <p class="eyebrow">Leitura responsável</p>
+            <h2>O que este painel não permite concluir</h2>
+            <p>Logs operacionais não são votos. Ausência de arquivo, severidades e timestamps atípicos, isoladamente, não demonstram falha, fraude nem resultado eleitoral.</p>
+            <a href="https://github.com/Andrre-M/tse-urna-pipeline/blob/main/docs/gold_validation_ce_2026_3220.md" target="_blank" rel="noreferrer">Ler validação técnica ↗</a>
+          </article>
+        </div>
+        <article class="panel table-panel">
+          <div class="panel-heading"><div><p class="eyebrow">Registros preservados</p><h2>Grupos com timestamp fora de 2026</h2></div></div>
+          <div class="table-wrap"><table><thead><tr><th>Seção</th><th>Município</th><th>Ano</th><th>Aplicação</th><th>Severidade</th><th class="numeric">Eventos</th></tr></thead><tbody id="outliers-table"></tbody></table></div>
+        </article>
+      </section>
+    </main>
+
+    <footer>
+      <p>Projeto independente, sem vínculo com o TSE.</p>
+      <p id="build-provenance">Gold publicada e revisionada.</p>
+    </footer>
+  </body>
+</html>
