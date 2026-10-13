@@ -55,6 +55,12 @@ As cinco tabelas Gold estão disponíveis no
 em um pacote de 40.749 linhas preparado para alimentar o dashboard sem acessar
 a Silver completa.
 
+## Dashboard
+
+O dashboard estático usa Plotly e lê somente a revisão publicada da Gold. O
+artefato é gerado com Polars, validando hashes e reconciliações antes da
+publicação no GitHub Pages; nenhum dado gerado é versionado no repositório.
+
 ## Ambiente
 
 O projeto requer Python 3.12 ou superior e

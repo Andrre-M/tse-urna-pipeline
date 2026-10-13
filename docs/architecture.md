@@ -78,3 +78,11 @@ da entrada foram processadas e as contagens de consistência fecharam.
 O nome do município é associado pelo código TSE usando o catálogo estadual
 cacheado no discovery. O dashboard lê apenas `overview`, `coverage`,
 `event_timeline`, `applications` e `temporal_outliers`.
+
+## Dashboard
+
+O dashboard é um site estático. Durante a publicação, um gerador em Python e
+Polars baixa os cinco Parquets da revisão Gold fixada, valida hashes, schemas e
+reconciliações e produz JSON somente no artefato do GitHub Pages. O navegador
+usa Plotly para filtros e gráficos; não há servidor de aplicação nem acesso às
+camadas Silver, Bronze ou RAW.
