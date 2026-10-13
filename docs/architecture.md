@@ -22,6 +22,9 @@ extração do logd.dat
        │
        ▼
  Silver events + section_coverage
+       │
+       ▼
+ Gold agregada para o dashboard
 ```
 
 O catálogo estadual define o universo de seções. Para cada seção, o discovery
@@ -64,3 +67,14 @@ retomam apenas as seções ainda não consultadas naquele ciclo.
 diverge do ano eleitoral, `timestamp_status` recebe
 `outside_election_year` e as colunas temporais validadas ficam nulas. O pipeline
 não tenta adivinhar a data correta.
+
+## Gold
+
+A Gold é derivada somente da Silver. Cada Parquet de eventos gera agregações
+parciais com checkpoint próprio; a execução seguinte reutiliza as partes já
+concluídas. As cinco tabelas finais só são promovidas depois que todas as partes
+da entrada foram processadas e as contagens de consistência fecharam.
+
+O nome do município é associado pelo código TSE usando o catálogo estadual
+cacheado no discovery. O dashboard lê apenas `overview`, `coverage`,
+`event_timeline`, `applications` e `temporal_outliers`.

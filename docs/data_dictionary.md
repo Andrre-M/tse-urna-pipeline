@@ -82,3 +82,115 @@ Partição física:
 As 1.885 seções sem arquivo publicado permanecem nessa tabela com
 `publication_status = not_published`. Elas não são removidas do denominador de
 cobertura e não geram linhas artificiais em `events`.
+
+## Gold
+
+Partição física: `data/gold/year=<ano>/pleito=<pleito>/uf=<uf>`. Cada tabela é
+gravada em seu próprio subdiretório. `municipality_name` vem do par `cd`/`nm`
+do catálogo estadual usado no discovery; códigos ausentes nesse catálogo são
+rejeitados.
+
+### `overview`
+
+Uma linha por eleição, pleito e UF.
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `election_year` | int | Ano da eleição |
+| `pleito` | string | Código do pleito no TSE |
+| `uf` | string | UF em maiúsculas |
+| `catalog_sections` | int | Seções presentes em `section_coverage` |
+| `published_sections` | int | Seções com `publication_status = published` |
+| `unpublished_sections` | int | Seções com `publication_status = not_published` |
+| `sections_with_events` | int | Seções com ao menos um evento Silver |
+| `municipalities` | int | Municípios distintos na cobertura |
+| `zones` | int | Pares município/zona distintos na cobertura |
+| `total_events` | int | Total de eventos Silver |
+| `valid_timestamp_events` | int | Eventos com `timestamp_status = valid` |
+| `temporal_outlier_events` | int | Eventos com `timestamp_status = outside_election_year` |
+| `applications` | int | Aplicações distintas em todos os eventos |
+| `severities` | int | Severidades distintas em todos os eventos |
+| `coverage_rate` | float | `published_sections / catalog_sections` |
+| `first_valid_event_at` | datetime, nullable | Menor timestamp validado |
+| `last_valid_event_at` | datetime, nullable | Maior timestamp validado |
+
+### `coverage`
+
+Uma linha por seção do catálogo. A contagem de eventos é obtida por `section_id`;
+seções sem correspondência em `events` recebem zero.
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `section_id` | string | Chave `UF-município-zona-seção` |
+| `election_year` | int | Ano da eleição |
+| `pleito` | string | Código do pleito no TSE |
+| `uf` | string | UF em maiúsculas |
+| `municipality` | string | Código TSE do município |
+| `municipality_name` | string | Nome do município no catálogo estadual |
+| `zone` | string | Zona eleitoral, 4 dígitos |
+| `section` | string | Seção eleitoral, 4 dígitos |
+| `publication_status` | string | Estado de publicação herdado da Silver |
+| `has_published_file` | bool | Indica se havia arquivo publicado |
+| `event_count` | int | Eventos Silver associados à seção |
+| `has_events` | bool | Indica se `event_count > 0` |
+
+### `event_timeline`
+
+Somente eventos com `timestamp_status = valid`, agregados por município, zona,
+data, hora e severidade.
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `election_year` | int | Ano da eleição |
+| `pleito` | string | Código do pleito no TSE |
+| `uf` | string | UF em maiúsculas |
+| `municipality` | string | Código TSE do município |
+| `municipality_name` | string | Nome do município no catálogo estadual |
+| `zone` | string | Zona eleitoral, 4 dígitos |
+| `event_date` | date | Data validada do evento |
+| `event_hour` | int | Hora local registrada, de 0 a 23 |
+| `severity` | string | Severidade normalizada |
+| `event_count` | int | Eventos do grupo |
+
+### `applications`
+
+Todos os eventos, inclusive os temporalmente atípicos, agregados por município,
+zona, aplicação e severidade.
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `election_year` | int | Ano da eleição |
+| `pleito` | string | Código do pleito no TSE |
+| `uf` | string | UF em maiúsculas |
+| `municipality` | string | Código TSE do município |
+| `municipality_name` | string | Nome do município no catálogo estadual |
+| `zone` | string | Zona eleitoral, 4 dígitos |
+| `application` | string | Aplicação normalizada |
+| `severity` | string | Severidade normalizada |
+| `event_count` | int | Eventos do grupo |
+
+### `temporal_outliers`
+
+Somente eventos com `timestamp_status = outside_election_year`, agregados por
+seção, ano registrado, aplicação e severidade.
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `election_year` | int | Ano esperado para a eleição |
+| `pleito` | string | Código do pleito no TSE |
+| `uf` | string | UF em maiúsculas |
+| `municipality` | string | Código TSE do município |
+| `municipality_name` | string | Nome do município no catálogo estadual |
+| `zone` | string | Zona eleitoral, 4 dígitos |
+| `section` | string | Seção eleitoral, 4 dígitos |
+| `section_id` | string | Chave `UF-município-zona-seção` |
+| `event_year_recorded` | int | Ano preservado do timestamp original |
+| `application` | string | Aplicação normalizada |
+| `severity` | string | Severidade normalizada |
+| `event_count` | int | Eventos do grupo |
+| `first_recorded_event_at` | datetime | Menor timestamp registrado no grupo |
+| `last_recorded_event_at` | datetime | Maior timestamp registrado no grupo |
+
+As tabelas Gold só são publicadas quando todos os Parquets Silver da partição
+foram agregados. Execuções limitadas persistem parciais reiniciáveis, mas não
+substituem uma Gold completa.

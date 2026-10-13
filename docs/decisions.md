@@ -9,4 +9,7 @@
 - Linhas não interpretadas vão para quarantine em vez de serem descartadas.
 - Seções sem arquivo permanecem na tabela de cobertura.
 - Timestamps fora do ano eleitoral são preservados, não corrigidos.
+- A Gold usa o catálogo estadual do discovery para associar código e nome do município.
+- Agregações Gold limitadas geram apenas parciais; tabelas finais exigem toda a Silver.
+- A linha do tempo exclui timestamps atípicos; as demais contagens os preservam.
 - Dados baixados, resultados e SQLite ficam fora do Git.
