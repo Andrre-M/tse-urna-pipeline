@@ -50,6 +50,11 @@ mantêm parciais reiniciáveis e só publicam as tabelas finais quando toda a
 partição estiver consistente. Os totais e hashes estão no
 [relatório de validação da Gold](docs/gold_validation_ce_2026_3220.md).
 
+As cinco tabelas Gold estão disponíveis no
+[Hugging Face](https://huggingface.co/datasets/Andrre-M/tse-urna-ce-2026-gold),
+em um pacote de 40.749 linhas preparado para alimentar o dashboard sem acessar
+a Silver completa.
+
 ## Ambiente
 
 O projeto requer Python 3.12 ou superior e
