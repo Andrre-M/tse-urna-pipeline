@@ -22,6 +22,7 @@ from tse_urna.preflight import run_preflight
 from tse_urna.quality.report import build_quality_summary, write_quality_report
 from tse_urna.transformation.bronze import build_bronze_batch
 from tse_urna.transformation.compaction import compact_bronze_partition
+from tse_urna.transformation.gold import build_gold_partition
 from tse_urna.transformation.silver import build_section_coverage, build_silver_events
 
 app = typer.Typer(no_args_is_help=True, help="Pipeline de logs públicos de urnas do TSE.")
@@ -42,6 +43,7 @@ def init_project() -> None:
         settings.data_dir / "bronze_compacted",
         settings.data_dir / "quarantine",
         settings.data_dir / "silver",
+        settings.data_dir / "gold",
         settings.metadata_dir,
     ]:
         path.mkdir(parents=True, exist_ok=True)
@@ -402,6 +404,49 @@ def silver(
             f"{result.distinct_sections} seções, "
             f"{result.temporal_outlier_rows} timestamp(s) fora de {year}."
         )
+
+
+@app.command("gold")
+def gold(
+    year: int = typer.Option(...),
+    pleito: str = typer.Option(...),
+    uf: str = typer.Option(...),
+    limit: int | None = typer.Option(
+        None, min=1, help="Limita os Parquets Silver pendentes nesta execução."
+    ),
+) -> None:
+    """Agrega a Silver em tabelas Gold reiniciáveis para o dashboard."""
+    uf = uf.upper()
+    partition = Path(f"year={year}") / f"pleito={pleito}" / f"uf={uf}"
+    result = build_gold_partition(
+        events_dir=settings.data_dir / "silver" / "events" / partition,
+        coverage_file=(
+            settings.data_dir
+            / "silver"
+            / "section_coverage"
+            / partition
+            / "part-00000.parquet"
+        ),
+        state_config_path=state_config_cache_path(
+            settings.metadata_dir, year=year, pleito=pleito, uf=uf
+        ),
+        output_dir=settings.data_dir / "gold" / partition,
+        uf=uf,
+        limit=limit,
+    )
+    typer.echo(
+        f"Gold: {result.processed_parts} parte(s) processada(s), "
+        f"{result.reused_parts} reutilizada(s), "
+        f"{result.remaining_parts} pendente(s)."
+    )
+    if result.completed:
+        typer.echo(
+            f"Gold concluída: {result.total_events} eventos, "
+            f"{result.catalog_sections} seções, "
+            f"{result.temporal_outlier_events} timestamp(s) atípico(s)."
+        )
+    else:
+        typer.echo("Parciais validadas; tabelas Gold finais ainda não publicadas.")
 
 
 @app.command("quality-report")

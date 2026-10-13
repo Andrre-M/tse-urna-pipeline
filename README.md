@@ -30,7 +30,7 @@ checksums, dicionário de dados e relatório de qualidade.
 ## Organização dos dados
 
 ```text
-catálogo → discovery → RAW → extração → Bronze → qualidade → Silver
+catálogo → discovery → RAW → extração → Bronze → qualidade → Silver → Gold
 ```
 
 O RAW guarda os arquivos baixados sem transformação. A Bronze preserva os
@@ -43,6 +43,11 @@ eventos e seus metadados de origem. A Silver oferece duas tabelas:
 
 O estado operacional fica em SQLite e os dados analíticos em Parquet. Arquivos
 baixados, resultados e banco local não são versionados.
+
+A Gold agrega a Silver em `overview`, `coverage`, `event_timeline`,
+`applications` e `temporal_outliers`. Execuções com `urna-etl gold --limit N`
+mantêm parciais reiniciáveis e só publicam as tabelas finais quando toda a
+partição estiver consistente.
 
 ## Ambiente
 
