@@ -1,0 +1,100 @@
+{
+  "dataset": "tse-urna-ce-2026",
+  "version": "0.4.0",
+  "prepared_at": "2026-10-13",
+  "source": {
+    "publisher": "Tribunal Superior Eleitoral",
+    "portal": "https://dadosabertos-novo.tse.jus.br/",
+    "terms": "https://dadosabertos.tse.jus.br/pages/perguntasfrequentes"
+  },
+  "scope": {
+    "election_year": 2026,
+    "pleito": "3220",
+    "uf": "CE",
+    "catalog_sections": 25650,
+    "sections_with_published_file": 23765,
+    "sections_without_published_file": 1885
+  },
+  "quality": {
+    "status": "PASS WITH WARNINGS",
+    "quarantine_rows": 0,
+    "timestamps_outside_election_year": 316
+  },
+  "policies": {
+    "sections_without_published_file": "Retained in section_coverage as not_published; no synthetic events are created.",
+    "timestamps_outside_election_year": "Original timestamp retained and flagged; validated timestamp and date are null."
+  },
+  "totals": {
+    "files": 9,
+    "rows": 143728899,
+    "bytes": 2630134315
+  },
+  "configurations": {
+    "events": {
+      "rows": 143703249,
+      "bytes": 2630037414,
+      "files": [
+        {
+          "path": "data/events/part-00000.parquet",
+          "rows": 19157920,
+          "bytes": 350526572,
+          "sha256": "d9eeef8009d673e6a0c643fabeb52f7f54b6d87819d62df1600d1ed7f039824f"
+        },
+        {
+          "path": "data/events/part-00001.parquet",
+          "rows": 19163110,
+          "bytes": 350848187,
+          "sha256": "61ef38e4a7fa33d993a94845a387938634a6cb4350121e52fe5ab52dd3e6aa2c"
+        },
+        {
+          "path": "data/events/part-00002.parquet",
+          "rows": 19154027,
+          "bytes": 351395710,
+          "sha256": "8ab2ce1009c6875b7cfb542b7f9a9351c7e99c41f22aaf2179d9c4ace831de19"
+        },
+        {
+          "path": "data/events/part-00003.parquet",
+          "rows": 19187185,
+          "bytes": 351598286,
+          "sha256": "e76a342f8d7b166a828bd55fc476954e4649e7c7b3f1846f6571a24248aad847"
+        },
+        {
+          "path": "data/events/part-00004.parquet",
+          "rows": 19129651,
+          "bytes": 349739177,
+          "sha256": "b918ea1dbb8df7d52ab2e0bda7eb1c60cd3f8b76ca80b26c4eca6a1b96c90416"
+        },
+        {
+          "path": "data/events/part-00005.parquet",
+          "rows": 19209369,
+          "bytes": 351360044,
+          "sha256": "02b081314d612e5fe975eebe880bad80e580244e1d54f4d0f1a3c6406b357ca4"
+        },
+        {
+          "path": "data/events/part-00006.parquet",
+          "rows": 19151001,
+          "bytes": 350156609,
+          "sha256": "18bf03cf31904e7eed4dc6963bd02687a62fe8c482e5564807e3cc618cbb6d4c"
+        },
+        {
+          "path": "data/events/part-00007.parquet",
+          "rows": 9550986,
+          "bytes": 174412829,
+          "sha256": "1cd39e74daec632e1ad4a0d8f434433bf037e7bc8abd9405690a22fe2939672b"
+        }
+      ]
+    },
+    "section_coverage": {
+      "rows": 25650,
+      "bytes": 96901,
+      "files": [
+        {
+          "path": "data/section_coverage/part-00000.parquet",
+          "rows": 25650,
+          "bytes": 96901,
+          "sha256": "dfbcc742eeabb7fe72487969e9328d65d353240396c23f3c16e7b77dd4eb541a"
+        }
+      ]
+    }
+  }
+}

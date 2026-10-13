@@ -16,12 +16,14 @@ dist/
 /data/quarantine/**
 /data/silver/**
 /data/gold/**
+/dataset/data/**
 /metadata/*.db
 /metadata/*.db-*
 /metadata/discovery/**
 
 # Keep directory placeholders
 !/data/**/.gitkeep
+!/dataset/data/**/.gitkeep
 !/metadata/.gitkeep
 
 # Secrets / local config
