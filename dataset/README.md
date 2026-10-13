@@ -30,6 +30,8 @@ Este dataset organiza em Parquet os logs públicos de urnas divulgados pelo
 Tribunal Superior Eleitoral para todas as seções do Ceará no pleito 3220 da
 eleição de 2026.
 
+Versão preparada: `0.4.0`.
+
 São duas configurações:
 
 - `events`: 143.703.249 eventos de 23.765 seções com arquivo publicado;

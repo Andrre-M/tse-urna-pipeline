@@ -51,6 +51,12 @@ data/silver/events/year=2026/pleito=3220/uf=CE
 data/silver/section_coverage/year=2026/pleito=3220/uf=CE
 ```
 
+## Publicação
+
+O envio da Silver não faz parte do ETL e não exige reprocessamento. Siga
+`docs/publication.md`; ele contém pré-condições, comandos retomáveis e critérios
+de validação.
+
 ## Falhas
 
 1. Rode `uv run urna-etl status`.
