@@ -11,11 +11,22 @@
 
 ## Agora
 
-- Definir o pacote de publicação.
-- Publicar os Parquets Silver com documentação, licença e checksums.
-- Registrar versão e procedimento de atualização do dataset.
+1. Confirmar com o proprietário o destino e a conta de publicação. O destino
+   operacional recomendado é o Hugging Face.
+2. Publicar a versão `0.4.0` conforme `docs/publication.md`.
+3. Validar arquivos, configurações, documentação e acesso público.
+4. Registrar a URL e a revisão publicada em `PROJECT_STATE.md`.
 
 ## Depois
 
-- Construir análises ou dashboard como consumidores da Silver.
+- Escolher, em uma decisão separada, entre notebook de análise, artigo técnico
+  ou dashboard como primeiro consumidor da Silver.
 - Avaliar outras UFs somente após a publicação do Ceará.
+
+## Publicação concluída quando
+
+- os 9 Parquets estiverem disponíveis no destino público;
+- `events` e `section_coverage` forem reconhecidos como configurações distintas;
+- cartão, dicionário, relatório, manifesto e checksums estiverem publicados;
+- as contagens públicas forem 143.703.249 e 25.650 linhas;
+- a URL e a revisão imutável estiverem registradas no estado do projeto.

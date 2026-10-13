@@ -13,4 +13,13 @@
 - Timestamps fora do ano eleitoral são preservados, sinalizados e excluídos da
   coluna temporal validada.
 - Cada ciclo de reconsulta das seções vazias tem checkpoint próprio no SQLite.
+- O pacote público usa Parquet e separa `events` de `section_coverage`; os
+  arquivos de origem e o SQLite nunca fazem parte da publicação.
+- O Hugging Face é o destino operacional recomendado para a primeira versão por
+  aceitar Parquet diretamente, permitir retomada do envio e expor configurações
+  distintas. A conta proprietária precisa ser confirmada antes de qualquer ação
+  externa. Uma troca de destino deve ser registrada aqui antes do envio.
+- A primeira versão pública será `0.4.0`, igual ao manifesto preparado. Uma
+  versão `1.0.0` só será adotada por decisão explícita após a publicação ter sido
+  validada.
 - O dashboard começa somente depois da publicação do dataset.

@@ -59,7 +59,8 @@ $env:TSE_METADATA_DIR = 'D:\tse-urna-pipeline\metadata'
 ```
 
 O [runbook](docs/runbook.md) contém a ordem dos comandos, limites e recuperação
-de falhas.
+de falhas. A publicação da Silver tem um procedimento separado em
+[docs/publication.md](docs/publication.md).
 
 ## Escolhas do projeto
 

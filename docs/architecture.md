@@ -49,6 +49,11 @@ e transformação sem repetir trabalho concluído.
                                     ▼
                            ┌──────────────────┐
                            │ Silver Parquet   │
+                           └────────┬─────────┘
+                                    │ publicação manual validada
+                                    ▼
+                           ┌──────────────────┐
+                           │ Dataset público  │
                            └──────────────────┘
 ```
 
@@ -145,3 +150,11 @@ checkpoint com a assinatura da fonte. Reexecuções reutilizam lotes concluídos
 `--limit` restringe somente lotes pendentes. O `_SUCCESS.json` da partição só é
 publicado quando todas as fontes esperadas e a cobertura de seções estão
 concluídas.
+
+## Distribuição
+
+A publicação é deliberadamente separada do ETL. Ela envia apenas a Silver e os
+metadados de auditoria descritos em `docs/publication.md`. RAW, Bronze e SQLite
+permanecem locais. O manifesto fixa nomes, tamanhos, contagens e hashes antes do
+envio; a URL e a revisão remota só entram em `PROJECT_STATE.md` depois da
+validação pública.

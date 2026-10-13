@@ -26,8 +26,17 @@ Relatório: `docs/quality_report_ce_2026_3220.md`.
 
 ## Pendente
 
-1. Criar o repositório do dataset no Hugging Face.
-2. Enviar os 9 Parquets e os arquivos de documentação.
-3. Validar as duas configurações na versão publicada.
+Próxima ação: confirmar com o proprietário o destino e o identificador da conta.
+O padrão recomendado é `<conta>/tse-urna-ce-2026` no Hugging Face.
+
+Depois da confirmação:
+
+1. executar `docs/publication.md`, sem reprocessar Bronze ou Silver;
+2. validar as duas configurações e as contagens públicas;
+3. registrar aqui a URL e a revisão publicada.
+
+Não há upload em andamento nem repositório remoto de dataset confirmado. Nunca
+presuma o nome da conta a partir do GitHub e nunca solicite que um token seja
+colado no chat.
 
 Dashboard continua fora do escopo até a publicação.

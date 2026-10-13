@@ -10,10 +10,15 @@
 
 ## Context
 
-- Current status and next task: `PROJECT_STATE.md`.
+- At the start of every session, read this file and `PROJECT_STATE.md` before
+  taking action.
+- Current status, verified baseline and next task: `PROJECT_STATE.md`.
 - Commands and recovery: `docs/runbook.md`.
+- Dataset publication: `docs/publication.md`.
 - Architecture changes: read/update `docs/decisions.md` and `docs/architecture.md`.
-- Bronze schema changes: update `docs/data_dictionary.md`.
+- Bronze or Silver schema changes: update `docs/data_dictionary.md`.
+- Do not infer progress from chat history. Verify the repository, local outputs
+  and remote destination named in `PROJECT_STATE.md`.
 
 ## Work
 
@@ -22,4 +27,6 @@
 - Add regression tests for real bugs.
 - Keep commits small.
 - Update `PROJECT_STATE.md` after material progress.
+- Record new architectural or publication choices in `docs/decisions.md`.
+- Never put credentials, tokens or account identifiers in the repository.
 - Report only verified results.
