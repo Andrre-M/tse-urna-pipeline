@@ -47,7 +47,8 @@ baixados, resultados e banco local não são versionados.
 A Gold agrega a Silver em `overview`, `coverage`, `event_timeline`,
 `applications` e `temporal_outliers`. Execuções com `urna-etl gold --limit N`
 mantêm parciais reiniciáveis e só publicam as tabelas finais quando toda a
-partição estiver consistente.
+partição estiver consistente. Os totais e hashes estão no
+[relatório de validação da Gold](docs/gold_validation_ce_2026_3220.md).
 
 ## Ambiente
 
