@@ -50,7 +50,7 @@ def test_quality_report_passes_complete_partition(tmp_path: Path):
         http_status=200,
     )
     manifest.mark_extracted(file_row["id"], extracted_path="x")
-    manifest.mark_parsed(file_row["id"], parsed_path="bronze")
+    manifest.mark_parsed_many([file_row["id"]], parsed_path="bronze")
 
     compacted = tmp_path / "compacted"
     compacted.mkdir()

@@ -407,16 +407,6 @@ class Manifest:
                 (error[:2000], record_id),
             )
 
-    def mark_parsed(self, record_id: int, *, parsed_path: str) -> None:
-        with self.connect() as conn:
-            conn.execute(
-                """
-                UPDATE files SET parse_status='parsed', parsed_path=?, error=NULL,
-                    updated_at=CURRENT_TIMESTAMP WHERE id=?
-                """,
-                (parsed_path, record_id),
-            )
-
     def mark_parsed_many(self, record_ids: Iterable[int], *, parsed_path: str) -> None:
         ids = [int(record_id) for record_id in record_ids]
         if not ids:
@@ -440,6 +430,7 @@ class Manifest:
                 """,
                 (error[:2000], record_id),
             )
+
     def all_section_status_counts(self) -> list[sqlite3.Row]:
         self.init()
         with self.connect() as conn:
