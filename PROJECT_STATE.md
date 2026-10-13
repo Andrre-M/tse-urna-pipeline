@@ -1,6 +1,6 @@
 # Estado do projeto
 
-Atualizado em 12 de outubro de 2026.
+Atualizado em 13 de outubro de 2026.
 
 ## Concluído
 
@@ -15,6 +15,8 @@ Atualizado em 12 de outubro de 2026.
   coluna temporal validada.
 - O ciclo de reconsulta das 1.885 seções vazias terminou sem encontrar arquivos
   novos.
+- O pacote de publicação está pronto em `dataset/`, com cartão, manifesto e
+  checksums verificados contra os 9 Parquets da Silver.
 - Ruff limpo e 40 testes aprovados.
 
 Dados e SQLite estão em `D:\tse-urna-pipeline`. A cópia original em `C:` não foi
@@ -24,7 +26,8 @@ Relatório: `docs/quality_report_ce_2026_3220.md`.
 
 ## Pendente
 
-1. Definir o pacote e o destino da publicação.
-2. Publicar o dataset Silver.
+1. Criar o repositório do dataset no Hugging Face.
+2. Enviar os 9 Parquets e os arquivos de documentação.
+3. Validar as duas configurações na versão publicada.
 
 Dashboard continua fora do escopo até a publicação.
