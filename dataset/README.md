@@ -2,7 +2,7 @@
 language:
   - pt
 license: other
-license_name: Termos de Dados Abertos do TSE
+license_name: tse-open-data-terms
 license_link: https://dadosabertos.tse.jus.br/pages/perguntasfrequentes
 pretty_name: Logs públicos de urnas — Ceará 2026/3220
 size_categories:

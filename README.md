@@ -20,6 +20,13 @@ sem amostragem.
 O relatório completo está em
 [docs/quality_report_ce_2026_3220.md](docs/quality_report_ce_2026_3220.md).
 
+## Dataset
+
+A camada Silver está disponível no
+[Hugging Face](https://huggingface.co/datasets/Andrre-M/tse-urna-ce-2026),
+separada em `events` e `section_coverage`. A publicação inclui manifesto,
+checksums, dicionário de dados e relatório de qualidade.
+
 ## Organização dos dados
 
 ```text
