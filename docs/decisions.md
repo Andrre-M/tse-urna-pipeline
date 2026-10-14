@@ -13,6 +13,3 @@
 - Agregações Gold limitadas geram apenas parciais; tabelas finais exigem toda a Silver.
 - A linha do tempo exclui timestamps atípicos; as demais contagens os preservam.
 - Dados baixados, resultados e SQLite ficam fora do Git.
-- O dashboard é estático e publicado no GitHub Pages para evitar hibernação de
-  servidor; seus dados são gerados apenas da revisão Gold publicada e não são
-  versionados no repositório.
