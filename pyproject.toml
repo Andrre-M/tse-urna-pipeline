@@ -1,7 +1,7 @@
 [project]
 name = "tse-urna-pipeline"
 version = "0.4.0"
-description = "Pipeline reprodutível para ingestão e preparação dos logs públicos de urnas eletrônicas do TSE."
+description = "Pipeline reprodutível para logs, resultados eleitorais e dashboard estático com dados públicos do TSE."
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"

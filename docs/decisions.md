@@ -13,3 +13,12 @@
 - Agregações Gold limitadas geram apenas parciais; tabelas finais exigem toda a Silver.
 - A linha do tempo exclui timestamps atípicos; as demais contagens os preservam.
 - Dados baixados, resultados e SQLite ficam fora do Git.
+- A Gold eleitoral é independente da Gold de logs e nunca usa eventos técnicos como votos.
+- O dashboard consome somente a Gold eleitoral; Bronze, Silver e RAW não fazem parte do frontend.
+- Polars é o motor analítico principal. DuckDB só será incluído diante de necessidade concreta.
+- Códigos de município, zona e seção permanecem como texto para preservar zeros à esquerda.
+- Perfil cadastral, aptos por cargo e comparecimento são universos distintos e permanecem nomeados separadamente.
+- `SQ_CANDIDATO = -3` identifica voto de legenda; apenas identificadores positivos são tratados como candidaturas.
+- A correspondência das geometrias do IBGE com códigos TSE é validada para os 184 municípios antes do build.
+- O dashboard é estático e dividido em arquivos por cargo e município/zona para carregamento progressivo.
+- O build publicado deve consumir uma revisão imutável da Gold eleitoral; a Gold local não é fonte de hospedagem.

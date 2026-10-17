@@ -1,80 +1,93 @@
 # Arquitetura
 
-## Fluxo
+## Visão geral
+
+O projeto possui dois fluxos analíticos separados. Logs técnicos nunca são
+usados para calcular votos, comparecimento ou resultados eleitorais.
 
 ```text
-catálogo estadual
-       │
-       ▼
-discovery por seção ──► manifest SQLite
-       │
-       ▼
-    RAW imutável
-       │
-       ▼
-extração do logd.dat
-       │
-       ▼
- Bronze + quarantine
-       │
-       ▼
- compactação e qualidade
-       │
-       ▼
- Silver events + section_coverage
-       │
-       ▼
- Gold agregada para o dashboard
+                         PIPELINE DE LOGS
+
+catálogo estadual ─► discovery ─► RAW ─► Bronze ─► Silver ─► Gold de logs
+                         │                    │
+                         └─ SQLite            └─ qualidade e cobertura
+
+                       PIPELINE ELEITORAL
+
+resultados por seção ───────┐
+detalhes de votação ────────┼─► Gold eleitoral ─► build ─► dashboard estático
+perfil do eleitorado ───────┤
+cadastro de candidaturas ───┘
 ```
 
+## Pipeline de logs
+
 O catálogo estadual define o universo de seções. Para cada seção, o discovery
-consulta o `aux.json` e registra os arquivos de urna encontrados. O SQLite
-guarda o andamento das etapas; os dados permanecem em arquivos.
-
-## Armazenamento
-
-Os diretórios podem ser configurados por `TSE_DATA_DIR` e
-`TSE_METADATA_DIR`. Isso permite manter os dados em outro volume sem colocar
-arquivos gerados no repositório.
+consulta o `aux.json` e registra os arquivos encontrados. O SQLite guarda o
+andamento operacional; os dados permanecem em arquivos.
 
 O RAW é imutável. Bronze e Silver usam Parquet com compressão Zstandard. Linhas
 que o parser não reconhece são gravadas em quarantine com arquivo, número da
 linha, conteúdo e motivo.
 
-## Retomada
-
-Discovery, download, extração e transformação registram checkpoints. Os lotes
-Bronze são identificados pelas fontes que contêm e só substituem o destino após
-uma escrita completa. A Silver repete a mesma estratégia para cada parte do
-Bronze compactado.
-
-Reexecutar uma etapa reutiliza o que já terminou. O parâmetro `--limit` serve
-para testar e avançar em lotes menores; ele não altera a identidade das saídas.
-
-## Cobertura
-
-`section_coverage` tem uma linha para cada seção do catálogo. Se o TSE não
-publicou arquivo, a seção recebe `publication_status = not_published` e continua
-no denominador de cobertura. Nenhum evento é inventado para preencher essa
-ausência.
-
-As reconsultas de seções vazias têm checkpoint próprio. Se forem interrompidas,
-retomam apenas as seções ainda não consultadas naquele ciclo.
-
-## Timestamps
+`section_coverage` mantém uma linha para cada seção do catálogo. Se o TSE não
+publicou arquivo, a seção recebe `publication_status = not_published` e
+permanece no denominador de cobertura. Nenhum evento é inventado.
 
 `event_timestamp_recorded` preserva o horário encontrado no log. Quando o ano
-diverge do ano eleitoral, `timestamp_status` recebe
-`outside_election_year` e as colunas temporais validadas ficam nulas. O pipeline
-não tenta adivinhar a data correta.
+diverge do ano eleitoral, o evento recebe
+`timestamp_status = outside_election_year`; o pipeline não tenta adivinhar uma
+data correta. Os 316 eventos atípicos continuam na Gold de logs.
 
-## Gold
-
-A Gold é derivada somente da Silver. Cada Parquet de eventos gera agregações
-parciais com checkpoint próprio; a execução seguinte reutiliza as partes já
-concluídas. As cinco tabelas finais só são promovidas depois que todas as partes
-da entrada foram processadas e as contagens de consistência fecharam.
-
-O nome do município é associado pelo código TSE usando o catálogo estadual
-cacheado no discovery. O dashboard lê apenas `overview`, `coverage`,
+A Gold de logs é derivada somente da Silver e contém `overview`, `coverage`,
 `event_timeline`, `applications` e `temporal_outliers`.
+
+## Pipeline eleitoral
+
+A Gold eleitoral é independente da Gold de logs. Ela combina sete arquivos
+oficiais do TSE convertidos para UTF-8:
+
+- votação por seção para cargos estaduais e Presidência;
+- detalhes de votação por seção para os dois escopos;
+- perfil cadastral do eleitorado do Ceará;
+- cadastro de candidaturas estaduais e presidenciais.
+
+O processamento usa Polars, normaliza códigos territoriais como texto, mantém
+as medidas por cargo e classifica separadamente candidaturas, votos de legenda,
+brancos e nulos. `SQ_CANDIDATO = -3` é tratado como voto de legenda; apenas
+identificadores positivos representam candidaturas.
+
+As sete tabelas resultantes são promovidas de forma atômica somente depois da
+escrita completa. A validação reconcilia os resultados municipais com as
+seções, as dimensões do perfil cadastral e os metadados de candidaturas.
+
+## Dashboard estático
+
+O build recebe explicitamente o diretório da Gold eleitoral e gera:
+
+- um atlas estadual com indicadores, municípios, eleitorado e índice de seções;
+- um arquivo por cargo para os resultados de candidaturas;
+- um arquivo por par município/zona para carregamento progressivo do explorador;
+- geometrias municipais associadas ao código TSE pelo nome oficial do IBGE.
+
+O frontend não executa consultas em Bronze, Silver ou RAW e não requer servidor
+de aplicação. Um servidor HTTP simples é suficiente para a prévia local.
+
+## Armazenamento e retomada
+
+`TSE_DATA_DIR` e `TSE_METADATA_DIR` permitem manter dados e estado operacional
+fora do checkout. Discovery, download, extração e transformação registram
+checkpoints. Escritas analíticas usam diretórios temporários e promoção atômica
+para evitar saídas parciais.
+
+Dados, `dist/`, SQLite, checkpoints, caches e segredos não são versionados.
+
+## Publicação
+
+A publicação do dashboard depende desta ordem:
+
+1. construir e validar a Gold eleitoral;
+2. publicar os Parquets;
+3. validar a cópia remota e fixar sua revisão imutável;
+4. reconstruir o dashboard consumindo somente essa revisão;
+5. publicar o artefato estático e executar o smoke test da URL pública.

@@ -194,3 +194,135 @@ seção, ano registrado, aplicação e severidade.
 As tabelas Gold só são publicadas quando todos os Parquets Silver da partição
 foram agregados. Execuções limitadas persistem parciais reiniciáveis, mas não
 substituem uma Gold completa.
+
+## Gold eleitoral
+
+Partição física:
+`data/gold_electoral/year=<ano>/round=<turno>/uf=<uf>/<tabela>`.
+
+Esta Gold é independente da Gold de logs. Resultados eleitorais, perfil
+cadastral e eventos técnicos não são combinados.
+
+### Campos territoriais e eleitorais comuns
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `election_year` | int | Ano da eleição ou do cadastro |
+| `round` | int | Turno eleitoral; ausente apenas em `electorate_profile` |
+| `uf` | string | UF em maiúsculas |
+| `municipality_code` | string | Código TSE do município, 5 dígitos |
+| `municipality_name` | string | Nome oficial do município |
+| `zone` | string | Zona eleitoral, 4 dígitos |
+| `section` | string | Seção eleitoral, 4 dígitos |
+| `section_id` | string | Chave `UF-município-zona-seção` |
+| `office_code` | int | Código do cargo no TSE |
+| `office` | string | Nome do cargo |
+
+### Medidas de votação comuns
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `eligible_voters` | int | Eleitores aptos no universo oficial do cargo |
+| `turnout` | int | Comparecimento oficial |
+| `abstentions` | int | Abstenções oficiais |
+| `nominal_votes` | int | Votos nominais |
+| `party_votes` | int | Votos de legenda |
+| `blank_votes` | int | Votos brancos |
+| `null_votes` | int | Votos nulos |
+| `separately_annulled_votes` | int | Votos anulados apurados em separado |
+| `valid_votes` | int | Soma de votos nominais e de legenda |
+| `total_votes` | int | Soma das categorias de voto |
+| `turnout_rate` | float | `turnout / eligible_voters` |
+| `abstention_rate` | float | `abstentions / eligible_voters` |
+| `blank_vote_rate` | float | `blank_votes / total_votes` |
+| `null_vote_rate` | float | `null_votes / total_votes` |
+
+Perfil cadastral, aptos por cargo e comparecimento têm universos oficiais
+distintos; campos com nomes diferentes não devem ser somados ou substituídos.
+
+### `election_overview`
+
+Uma linha por cargo. Além das medidas comuns, contém:
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `election_code` | int | Código da eleição no TSE |
+| `election_name` | string | Nome da eleição |
+| `election_date` | string | Data publicada na fonte |
+
+### `municipality_summary`
+
+Uma linha por município e cargo. Contém os campos da visão estadual acrescidos
+de `municipality_code` e `municipality_name`.
+
+### `electorate_profile`
+
+Perfil cadastral agregado por município e dimensão.
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `dimension` | string | `gender`, `age_band`, `education` ou `age_gender` |
+| `category` | string | Categoria principal da dimensão |
+| `subcategory` | string, nullable | Gênero quando `dimension = age_gender`; nulo nas demais dimensões |
+| `registered_electors` | int | Eleitores cadastrados no grupo |
+| `biometric_electors` | int | Eleitores com biometria no grupo |
+| `electors_with_disability` | int | Eleitores com deficiência no grupo |
+| `electors_with_social_name` | int | Eleitores com nome social no grupo |
+
+Em `age_gender`, `category` contém a faixa etária e `subcategory` contém o
+gênero. A soma por faixa reconcilia com `age_band`; a soma por gênero reconcilia
+com `gender`. O perfil não representa comparecimento ou resultado eleitoral.
+
+### `candidate_results`
+
+Resultados agregados por município, cargo e opção de voto.
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `ballot_number` | int | Número digitado ou código especial de voto |
+| `ballot_name` | string | Nome publicado para a opção de voto |
+| `candidate_id` | int, nullable | Sequencial do candidato no TSE |
+| `result_type` | string | `candidate` ou `party` |
+| `votes` | int | Votos da opção no município |
+| `candidate_number` | int, nullable | Número da candidatura |
+| `candidate_name` | string, nullable | Nome de urna |
+| `candidate_full_name` | string, nullable | Nome completo |
+| `party_abbreviation` | string, nullable | Sigla partidária |
+| `party_name` | string, nullable | Nome do partido |
+| `candidacy_status` | string, nullable | Situação da candidatura |
+| `round_result_status` | string, nullable | Resultado da candidatura no turno |
+
+Linhas com `result_type = party` representam votos de legenda e não recebem
+metadados de candidatura. Apenas identificadores positivos são candidatos.
+
+### `section_summary`
+
+Uma linha por seção e cargo, com as medidas de votação comuns e:
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `voting_place_code` | string | Código do local de votação |
+| `voting_place_name` | string | Nome do local de votação |
+| `voting_place_address` | string | Endereço publicado para o local |
+| `section_installed` | string | Indicador de seção instalada |
+| `section_annulled` | string | Indicador de seção anulada |
+
+### `section_results`
+
+Resultados por seção, cargo e opção de voto. Contém os campos de identificação
+de `candidate_results`, além de município, zona, seção e `section_id`.
+Também preserva `blank` e `null` em `result_type`.
+
+### `metadata`
+
+Uma linha descrevendo o pacote publicado.
+
+| Campo | Tipo | Descrição |
+|---|---|---|
+| `schema_version` | int | Versão do contrato da Gold eleitoral |
+| `scope` | string | Escopo declarado do pacote |
+| `source_authority` | string | Autoridade responsável pelas fontes |
+| `registered_electors_profile` | int | Total reconciliado do perfil cadastral |
+| `presidential_eligible_voters` | int | Aptos no universo oficial de Presidência |
+| `limitations` | string | Limitações essenciais de interpretação |
+| `source_files` | string | Lista JSON dos arquivos de origem |

@@ -1,59 +1,87 @@
 # TSE Urna Pipeline
 
-Pipeline em Python para baixar e estruturar os logs públicos de urnas divulgados
-pelo Tribunal Superior Eleitoral no
-[Portal de Dados Abertos](https://dadosabertos-novo.tse.jus.br/).
+Pipeline reprodutível em Python para organizar dados públicos do Tribunal
+Superior Eleitoral e transformá-los em produtos analíticos verificáveis.
 
-O recorte processado neste repositório é o Ceará na eleição de 2026, pleito
-3220. A carga foi feita para todas as seções disponíveis no catálogo estadual,
-sem amostragem.
+O projeto trabalha com dois domínios independentes:
 
-## Resultado
+- **logs técnicos de urna**, processados em Bronze, Silver e Gold sem qualquer
+  interpretação como votos;
+- **resultados eleitorais e perfil cadastral**, consolidados em uma Gold
+  eleitoral própria e consumidos por um dashboard totalmente estático.
+
+O recorte atual é o Ceará, eleição de 2026, primeiro turno, pleito 3220.
+
+## Resultado atual
+
+### Logs técnicos
 
 - 25.650 seções catalogadas;
 - 23.765 arquivos de urna processados;
-- 143.703.249 eventos na camada Silver;
+- 143.703.249 eventos na Silver;
 - 1.885 seções sem arquivo publicado;
 - nenhuma linha em quarentena;
 - 316 timestamps fora de 2026, preservados e sinalizados.
 
-O relatório completo está em
-[docs/quality_report_ce_2026_3220.md](docs/quality_report_ce_2026_3220.md).
+Esses eventos são registros técnicos. Eles não representam votos nem resultados
+eleitorais. A validação completa está em
+[docs/gold_validation_ce_2026_3220.md](docs/gold_validation_ce_2026_3220.md).
 
-## Dataset
+### Gold eleitoral
 
-A camada Silver está disponível no
-[Hugging Face](https://huggingface.co/datasets/Andrre-M/tse-urna-ce-2026),
-separada em `events` e `section_coverage`. A publicação inclui manifesto,
-checksums, dicionário de dados e relatório de qualidade.
+- 184 municípios;
+- 23.765 seções;
+- 5 cargos;
+- 6.998.494 registros no perfil cadastral;
+- 66.528 resultados agregados por município e opção de voto;
+- 2.751.489 resultados por seção;
+- sete tabelas Parquet, validadas com reconciliações e SHA-256.
 
-## Organização dos dados
+O relatório está em
+[docs/electoral_gold_validation_ce_2026_round_1.md](docs/electoral_gold_validation_ce_2026_round_1.md).
+
+## Dashboard
+
+O frontend em `dashboard/` é HTML, CSS e JavaScript estáticos. O build lê apenas
+a Gold eleitoral e gera arquivos em `dist/`, que não são versionados.
+
+As cinco áreas do produto são:
+
+1. **Overview** — visão estadual e indicadores centrais;
+2. **Municípios** — mapa, comparação e tabela ordenável;
+3. **Eleitorado** — perfil cadastral, biometria, escolaridade e pirâmide etária;
+4. **Cargos** — resultados, candidaturas, mapas e comparações territoriais;
+5. **Explorador** — navegação progressiva por município, zona e seção.
+
+`Fonte e metodologia` permanece como conteúdo secundário no rodapé. O dashboard
+não acessa Bronze, Silver ou RAW.
+
+A publicação pública do dashboard será adicionada depois que a Gold eleitoral
+for publicada, validada e fixada por uma revisão imutável.
+
+## Arquitetura
 
 ```text
-catálogo → discovery → RAW → extração → Bronze → qualidade → Silver → Gold
+logs de urna ──► RAW ──► Bronze ──► Silver ──► Gold de logs
+
+resultados + eleitorado oficiais ──► Gold eleitoral ──► build estático
+                                                       └─► dashboard
 ```
 
-O RAW guarda os arquivos baixados sem transformação. A Bronze preserva os
-eventos e seus metadados de origem. A Silver oferece duas tabelas:
+As duas Golds não são misturadas. O desenho completo está em
+[docs/architecture.md](docs/architecture.md), o contrato das tabelas em
+[docs/data_dictionary.md](docs/data_dictionary.md) e as decisões em
+[docs/decisions.md](docs/decisions.md).
 
-- `events`: eventos normalizados, com identificação da seção e política
-  temporal explícita;
-- `section_coverage`: todas as seções do catálogo, inclusive as que não tinham
-  arquivo publicado.
+## Datasets publicados
 
-O estado operacional fica em SQLite e os dados analíticos em Parquet. Arquivos
-baixados, resultados e banco local não são versionados.
+- [Silver de logs](https://huggingface.co/datasets/Andrre-M/tse-urna-silver),
+  revisão `6cf582bf2fbbe39eb5f0198ec68f88d7e0014ea7`;
+- [Gold de logs](https://huggingface.co/datasets/Andrre-M/tse-urna-gold),
+  revisão `bb114e79239a8315eb8f069aaeeb120081bc54a9`.
 
-A Gold agrega a Silver em `overview`, `coverage`, `event_timeline`,
-`applications` e `temporal_outliers`. Execuções com `urna-etl gold --limit N`
-mantêm parciais reiniciáveis e só publicam as tabelas finais quando toda a
-partição estiver consistente. Os totais e hashes estão no
-[relatório de validação da Gold](docs/gold_validation_ce_2026_3220.md).
-
-As cinco tabelas Gold estão disponíveis no
-[Hugging Face](https://huggingface.co/datasets/Andrre-M/tse-urna-ce-2026-gold),
-em um pacote de 40.749 linhas preparado para alimentar o dashboard sem acessar
-a Silver completa.
+A Gold eleitoral ainda não foi publicada. Dados, builds, SQLite, checkpoints e
+segredos permanecem fora do Git.
 
 ## Ambiente
 
@@ -74,14 +102,45 @@ $env:TSE_DATA_DIR = 'D:\dados\tse-urna\data'
 $env:TSE_METADATA_DIR = 'D:\dados\tse-urna\metadata'
 ```
 
-O schema das camadas está em [docs/data_dictionary.md](docs/data_dictionary.md)
-e as decisões de implementação em [docs/decisions.md](docs/decisions.md).
+## Gold eleitoral local
+
+O comando espera os sete CSVs oficiais convertidos para UTF-8 em um mesmo
+diretório:
+
+```powershell
+uv run urna-etl electoral-gold --source-dir <diretorio-dos-csvs>
+```
+
+Para escolher explicitamente o destino:
+
+```powershell
+uv run python scripts/build_electoral_gold.py <fontes> <gold-destino>
+uv run python scripts/validate_electoral_gold.py <gold-destino>
+```
+
+O build do dashboard também recebe a Gold explicitamente. As geometrias e a
+relação de municípios usadas no mapa vêm das APIs oficiais do IBGE e são
+fornecidas como arquivos locais, sem serem incorporadas ao repositório:
+
+```powershell
+uv run python scripts/build_dashboard.py `
+  --gold-dir <gold-destino> `
+  --source-dir dashboard `
+  --output-dir dist `
+  --geojson <malha-municipal-geojson> `
+  --ibge-municipalities <municipios-ibge-json>
+```
 
 ## Limites
 
-Os resultados deste recorte foram validados apenas para o Ceará em
-2026/3220. A ausência de arquivo para uma seção e os timestamps atípicos
-reproduzem o material encontrado na fonte; isoladamente, não permitem concluir
-nada sobre o processo eleitoral.
+- O recorte foi validado somente para Ceará, 2026, primeiro turno e pleito 3220.
+- Perfil cadastral, eleitores aptos por cargo e comparecimento têm universos
+  oficiais distintos e não devem ser tratados como a mesma medida.
+- Ausência de arquivo de log e timestamps atípicos reproduzem a fonte e,
+  isoladamente, não permitem concluir nada sobre o processo eleitoral.
+- O projeto é independente e não possui vínculo com o TSE.
 
-Este é um projeto independente e sem vínculo com o TSE.
+## Licença
+
+Código disponibilizado sob a licença MIT. Os dados permanecem sujeitos às
+condições e à atribuição de suas fontes oficiais.
