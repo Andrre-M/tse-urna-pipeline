@@ -75,13 +75,14 @@ As duas Golds não são misturadas. O desenho completo está em
 
 ## Datasets publicados
 
-- [Silver de logs](https://huggingface.co/datasets/Andrre-M/tse-urna-silver),
+- [Silver de logs](https://huggingface.co/datasets/Andrre-M/tse-urna-ce-2026),
   revisão `6cf582bf2fbbe39eb5f0198ec68f88d7e0014ea7`;
-- [Gold de logs](https://huggingface.co/datasets/Andrre-M/tse-urna-gold),
-  revisão `bb114e79239a8315eb8f069aaeeb120081bc54a9`.
+- [Gold de logs e eleitoral](https://huggingface.co/datasets/Andrre-M/tse-urna-ce-2026-gold),
+  revisão `f9d59eb4e924d3f554d2862d1e3ba1629633f7f9`.
 
-A Gold eleitoral ainda não foi publicada. Dados, builds, SQLite, checkpoints e
-segredos permanecem fora do Git.
+A extensão eleitoral está em `data/electoral/` e possui manifesto, checksums,
+dicionário e validação independentes da Gold de logs. Dados, builds, SQLite,
+checkpoints e segredos permanecem fora do Git.
 
 ## Ambiente
 
@@ -118,18 +119,20 @@ uv run python scripts/build_electoral_gold.py <fontes> <gold-destino>
 uv run python scripts/validate_electoral_gold.py <gold-destino>
 ```
 
-O build do dashboard também recebe a Gold explicitamente. As geometrias e a
-relação de municípios usadas no mapa vêm das APIs oficiais do IBGE e são
-fornecidas como arquivos locais, sem serem incorporadas ao repositório:
+Por padrão, o build baixa e valida a revisão imutável da Gold eleitoral
+publicada. As geometrias e a relação de municípios usadas no mapa vêm das APIs
+oficiais do IBGE e são fornecidas como arquivos locais, sem serem incorporadas
+ao repositório:
 
 ```powershell
 uv run python scripts/build_dashboard.py `
-  --gold-dir <gold-destino> `
   --source-dir dashboard `
   --output-dir dist `
   --geojson <malha-municipal-geojson> `
   --ibge-municipalities <municipios-ibge-json>
 ```
+
+`--gold-dir` existe apenas como override explícito para desenvolvimento local.
 
 ## Limites
 

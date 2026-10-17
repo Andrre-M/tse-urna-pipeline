@@ -87,7 +87,7 @@ Dados, `dist/`, SQLite, checkpoints, caches e segredos não são versionados.
 A publicação do dashboard depende desta ordem:
 
 1. construir e validar a Gold eleitoral;
-2. publicar os Parquets;
+2. publicar os Parquets em `Andrre-M/tse-urna-ce-2026-gold`;
 3. validar a cópia remota e fixar sua revisão imutável;
-4. reconstruir o dashboard consumindo somente essa revisão;
+4. reconstruir o dashboard consumindo somente a revisão fixada no build;
 5. publicar o artefato estático e executar o smoke test da URL pública.

@@ -14,6 +14,7 @@ MODULE_SPEC.loader.exec_module(BUILD_DASHBOARD)
 
 _prepare_geojson = BUILD_DASHBOARD._prepare_geojson
 _profile_summary = BUILD_DASHBOARD._profile_summary
+_sha256 = BUILD_DASHBOARD._sha256
 _zone_summary = BUILD_DASHBOARD._zone_summary
 
 
@@ -103,3 +104,21 @@ def test_dashboard_summaries_keep_one_electorate_universe_and_office_rates():
     assert zone["turnout"] == 230
     assert zone["turnout_rate"] == 230 / 300
     assert zone["blank_vote_rate"] == 15 / 230
+
+
+def test_published_gold_revision_and_hash_are_pinned(tmp_path):
+    payload = tmp_path / "payload.bin"
+    payload.write_bytes(b"gold-eleitoral")
+
+    assert BUILD_DASHBOARD.PUBLISHED_GOLD_REPO == (
+        "Andrre-M/tse-urna-ce-2026-gold"
+    )
+    assert BUILD_DASHBOARD.PUBLISHED_GOLD_REVISION == (
+        "f9d59eb4e924d3f554d2862d1e3ba1629633f7f9"
+    )
+    assert BUILD_DASHBOARD.PUBLISHED_GOLD_MANIFEST_SHA256 == (
+        "4a601143fabca9fba7174e764fe4c318d08e152f63d0aed42d57ee0d70216b2b"
+    )
+    assert _sha256(payload) == (
+        "4778aa5ebf493e6d53dc692412b70ca9d58966fc70e44afa65a18de1f39ada82"
+    )

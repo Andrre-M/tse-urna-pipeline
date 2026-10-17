@@ -1,13 +1,79 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import shutil
 import unicodedata
 from pathlib import Path
 from typing import Any
 
+import httpx
 import polars as pl
+
+PUBLISHED_GOLD_REPO = "Andrre-M/tse-urna-ce-2026-gold"
+PUBLISHED_GOLD_REVISION = "f9d59eb4e924d3f554d2862d1e3ba1629633f7f9"
+PUBLISHED_GOLD_MANIFEST = "electoral_manifest.json"
+PUBLISHED_GOLD_MANIFEST_SHA256 = (
+    "4a601143fabca9fba7174e764fe4c318d08e152f63d0aed42d57ee0d70216b2b"
+)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _download(client: httpx.Client, url: str, destination: Path) -> None:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = destination.with_name(f".{destination.name}.download")
+    try:
+        with client.stream("GET", url) as response:
+            response.raise_for_status()
+            with temporary.open("wb") as output:
+                for chunk in response.iter_bytes():
+                    output.write(chunk)
+        temporary.replace(destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def fetch_published_gold(cache_dir: Path) -> Path:
+    """Baixa e valida a revisão imutável da Gold eleitoral publicada."""
+    revision_dir = cache_dir / PUBLISHED_GOLD_REVISION
+    manifest_path = revision_dir / PUBLISHED_GOLD_MANIFEST
+    base_url = (
+        f"https://huggingface.co/datasets/{PUBLISHED_GOLD_REPO}/resolve/"
+        f"{PUBLISHED_GOLD_REVISION}"
+    )
+    with httpx.Client(follow_redirects=True, timeout=120.0) as client:
+        if (
+            not manifest_path.exists()
+            or _sha256(manifest_path) != PUBLISHED_GOLD_MANIFEST_SHA256
+        ):
+            _download(client, f"{base_url}/{PUBLISHED_GOLD_MANIFEST}", manifest_path)
+        if _sha256(manifest_path) != PUBLISHED_GOLD_MANIFEST_SHA256:
+            raise ValueError("SHA-256 divergente no manifesto eleitoral publicado")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest.get("extension") != "electoral":
+            raise ValueError("Manifesto publicado não descreve a Gold eleitoral")
+        for table, metadata in manifest["configurations"].items():
+            remote_path = str(metadata["path"])
+            prefix = "data/electoral/"
+            if not remote_path.startswith(prefix):
+                raise ValueError(f"Caminho eleitoral inválido no manifesto: {remote_path}")
+            destination = revision_dir / remote_path.removeprefix(prefix)
+            expected_hash = str(metadata["sha256"])
+            if not destination.exists() or _sha256(destination) != expected_hash:
+                _download(client, f"{base_url}/{remote_path}", destination)
+            if destination.stat().st_size != int(metadata["bytes"]):
+                raise ValueError(f"Tamanho divergente em {table}: {destination}")
+            if _sha256(destination) != expected_hash:
+                raise ValueError(f"SHA-256 divergente em {table}: {destination}")
+    return revision_dir
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -363,14 +429,22 @@ def build_dashboard(
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--gold-dir", type=Path, required=True)
+    parser.add_argument(
+        "--gold-dir",
+        type=Path,
+        help="Override local para desenvolvimento; por padrão usa a Gold publicada.",
+    )
+    parser.add_argument(
+        "--cache-dir", type=Path, default=Path(".dashboard-cache") / "gold"
+    )
     parser.add_argument("--source-dir", type=Path, default=Path("dashboard"))
     parser.add_argument("--output-dir", type=Path, default=Path("dist"))
     parser.add_argument("--geojson", type=Path)
     parser.add_argument("--ibge-municipalities", type=Path)
     args = parser.parse_args()
+    gold_dir = args.gold_dir or fetch_published_gold(args.cache_dir)
     build_dashboard(
-        gold_dir=args.gold_dir,
+        gold_dir=gold_dir,
         source_dir=args.source_dir,
         output_dir=args.output_dir,
         geojson_path=args.geojson,

@@ -2,10 +2,12 @@
 
 Gerado em: 17 de outubro de 2026
 
-Status local: **PASS**
+Status local e remoto: **PASS**
 
-A revisão pública ainda não foi criada. Este relatório deverá ser reproduzido
-contra a cópia publicada antes da hospedagem do dashboard.
+Dataset: `Andrre-M/tse-urna-ce-2026-gold`
+
+Revisão imutável validada:
+`f9d59eb4e924d3f554d2862d1e3ba1629633f7f9`.
 
 ## Escopo
 
