@@ -279,6 +279,7 @@ def build_dashboard(
             "ballot_number",
             "ballot_name",
             "candidate_id",
+            "result_type",
             "candidate_name",
             "party_abbreviation",
             "candidacy_status",

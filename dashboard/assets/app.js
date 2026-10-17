@@ -263,7 +263,7 @@ function updateProfile(municipality, mapMetric) {
   container.querySelectorAll("[data-profile-municipality]").forEach((row) => row.addEventListener("click", () => choose(row.dataset.profileMunicipality)));
 }
 
-function candidateKey(row) { return `${row.ballot_number}|${row.candidate_id || "party"}`; }
+function candidateKey(row) { return `${row.ballot_number}|${row.candidate_id ?? row.result_type}`; }
 function aggregateCandidates(source, municipality = "", query = "") {
   const normalized = slug(query);
   const filtered = source.filter((row) => (!municipality || row.municipality_code === municipality) && (!normalized || slug(`${row.candidate_name} ${row.ballot_name} ${row.ballot_number} ${row.party_abbreviation}`).includes(normalized)));
@@ -276,17 +276,18 @@ function aggregateCandidates(source, municipality = "", query = "") {
 async function renderCargos() {
   const offices = state.data.candidate_files;
   state.view.candidateSort = { key: "votes", direction: "desc" };
+  state.view.partySort = { key: "votes", direction: "desc" };
   state.view.mapCandidate = "";
-  app.innerHTML = `${pageHead("Resultados por cargo", "Candidaturas no território.", "Compare candidaturas e partidos no estado e nos municípios, com contexto sobre a composição dos votos.", "Escopo", "Percentuais de candidatura usam os votos válidos do recorte. Para Senado, cada eleitor podia registrar dois votos.")}
+  app.innerHTML = `${pageHead("Resultados por cargo", "Candidaturas no território.", "Compare o desempenho das candidaturas no estado e nos municípios. Votos dados diretamente ao partido aparecem em uma seção separada.", "Escopo", "Percentuais de candidatura usam os votos válidos do recorte. Para Senado, cada eleitor podia registrar dois votos.")}
     <div class="filter-bar"><div class="field"><label for="candidate-office">Cargo</label><select id="candidate-office">${offices.map((row) => `<option value="${row.office_code}">${escapeHtml(row.office)}</option>`).join("")}</select></div><div class="field"><label for="candidate-municipality">Localidade da tabela</label><select id="candidate-municipality">${municipalityOptions()}</select></div><div class="field"><label for="candidate-search">Buscar candidatura</label><input id="candidate-search" type="search" placeholder="Nome, número ou partido"></div></div>
     <div id="candidate-summary" class="metric-grid candidate-metrics"></div>
-    <section class="panel-grid page-panels"><article class="panel wide"><div class="panel-heading"><div><h3 id="candidate-title">Resultado</h3><p class="panel-intro" id="candidate-caption"></p></div></div><div id="candidate-chart"></div><div id="candidate-table" class="table-spacing"></div></article><article class="panel"><div class="field map-candidate-field"><label for="map-candidate">Candidatura no mapa</label><select id="map-candidate"></select></div><p class="panel-intro">Percentual entre os votos válidos do cargo em cada município.</p><div id="candidate-map" class="map-shell"></div></article><article class="panel"><h3>Maiores percentuais municipais</h3><p class="panel-intro" id="candidate-map-caption"></p><div id="candidate-ranking"></div></article></section>`;
+    <section class="panel-grid page-panels"><article class="panel wide"><div class="panel-heading"><div><h3 id="candidate-title">Candidaturas</h3><p class="panel-intro" id="candidate-caption"></p></div></div><div id="candidate-chart"></div><div id="candidate-table" class="table-spacing"></div></article><article class="panel"><div class="field map-candidate-field"><label for="map-candidate">Candidatura no mapa</label><select id="map-candidate"></select></div><p class="panel-intro">Percentual entre os votos válidos do cargo em cada município.</p><div id="candidate-map" class="map-shell"></div></article><article class="panel"><h3>Maiores percentuais municipais</h3><p class="panel-intro" id="candidate-map-caption"></p><div id="candidate-ranking"></div></article><article class="panel wide party-votes-panel" id="party-votes-panel" hidden><div class="panel-heading"><div><h3>Votos de legenda</h3><p class="panel-intro" id="party-caption"></p></div></div><div id="party-chart"></div><div id="party-table" class="table-spacing"></div></article></section>`;
   let source = [];
   const update = () => updateCandidates(source, document.querySelector("#candidate-municipality").value, document.querySelector("#candidate-search").value);
   const loadOffice = async () => {
     const code = document.querySelector("#candidate-office").value;
     const file = offices.find((row) => String(row.office_code) === code).file;
-    source = expandFrame(await loadJson(file)); state.view.mapCandidate = ""; state.view.candidateSort = { key: "votes", direction: "desc" }; update();
+    source = expandFrame(await loadJson(file)); state.view.mapCandidate = ""; state.view.candidateSort = { key: "votes", direction: "desc" }; state.view.partySort = { key: "votes", direction: "desc" }; update();
   };
   document.querySelector("#candidate-office").addEventListener("change", loadOffice);
   document.querySelector("#candidate-municipality").addEventListener("change", update);
@@ -296,32 +297,60 @@ async function renderCargos() {
 }
 
 function updateCandidates(source, municipality, query) {
-  const statewide = sortRows(aggregateCandidates(source), "votes", "desc");
+  const candidateSource = source.filter((row) => row.result_type === "candidate");
+  const partySource = source.filter((row) => row.result_type === "party");
+  const statewide = sortRows(aggregateCandidates(candidateSource), "votes", "desc");
   const selectedKey = statewide.some((row) => row.candidate_key === state.view.mapCandidate) ? state.view.mapCandidate : statewide[0]?.candidate_key;
   state.view.mapCandidate = selectedKey || "";
   const selector = document.querySelector("#map-candidate");
-  selector.innerHTML = statewide.map((row) => `<option value="${row.candidate_key}" ${row.candidate_key === selectedKey ? "selected" : ""}>${row.ballot_number} · ${escapeHtml(row.candidate_name || row.ballot_name)}</option>`).join("");
+  selector.innerHTML = statewide.map((row) => `<option value="${row.candidate_key}" ${row.candidate_key === selectedKey ? "selected" : ""}>${row.ballot_number} · ${escapeHtml(row.candidate_name)}</option>`).join("");
   const office = state.data.overview.find((row) => row.office === source[0]?.office);
-  document.querySelector("#candidate-summary").innerHTML = `${metric("Votos válidos", fmt.format(office.valid_votes), pct.format(office.valid_votes / office.total_votes))}${metric("Brancos", fmt.format(office.blank_votes), pct.format(office.blank_vote_rate))}${metric("Nulos", fmt.format(office.null_votes), pct.format(office.null_vote_rate))}${metric("Candidaturas / legendas", fmt.format(statewide.length), source[0]?.office || "Cargo selecionado")}`;
-  const aggregated = aggregateCandidates(source, municipality, query);
-  const total = sum(aggregated, "votes");
-  aggregated.forEach((row) => { row.share = total ? row.votes / total : 0; row.display_name = row.candidate_name || row.ballot_name; row.status = row.round_result_status || row.candidacy_status || ""; });
+  document.querySelector("#candidate-summary").innerHTML = `${metric("Votos válidos", fmt.format(office.valid_votes), pct.format(office.valid_votes / office.total_votes))}${metric("Brancos", fmt.format(office.blank_votes), pct.format(office.blank_vote_rate))}${metric("Nulos", fmt.format(office.null_votes), pct.format(office.null_vote_rate))}${metric("Candidaturas", fmt.format(statewide.length), source[0]?.office || "Cargo selecionado")}`;
+  const validRows = source.filter((row) => !municipality || row.municipality_code === municipality);
+  const validVotes = sum(validRows, "votes");
+  const allCandidates = aggregateCandidates(candidateSource, municipality);
+  const nominalVotes = sum(allCandidates, "votes");
+  const aggregated = aggregateCandidates(candidateSource, municipality, query);
+  aggregated.forEach((row) => { row.share = validVotes ? row.votes / validVotes : 0; row.display_name = row.candidate_name; row.status = row.round_result_status || row.candidacy_status || ""; });
   const rows = sortRows(aggregated, state.view.candidateSort.key, state.view.candidateSort.direction);
-  document.querySelector("#candidate-title").textContent = source[0]?.office || "Resultado";
-  document.querySelector("#candidate-caption").textContent = `${fmt.format(total)} votos nominais ou de legenda no recorte · ${rows.length} resultados`;
+  document.querySelector("#candidate-title").textContent = `Candidaturas · ${source[0]?.office || "cargo selecionado"}`;
+  document.querySelector("#candidate-caption").textContent = `${fmt.format(nominalVotes)} votos nominais no recorte · ${rows.length}${query ? ` de ${allCandidates.length}` : ""} candidaturas`;
   document.querySelector("#candidate-chart").innerHTML = barChart(sortRows(aggregated, "votes", "desc").map((row) => ({ label: `${row.ballot_number} · ${row.display_name}${row.party_abbreviation ? ` (${row.party_abbreviation})` : ""}`, value: row.votes })), { candidate: true, limit: 15 });
   const hasParty = rows.some((row) => row.party_abbreviation); const hasStatus = rows.some((row) => row.status);
   const sort = state.view.candidateSort; const container = document.querySelector("#candidate-table");
-  container.innerHTML = `<div class="data-table-wrap"><table><thead><tr>${sortHeader("Nº", "ballot_number", sort)}${sortHeader("Candidatura / legenda", "display_name", sort)}${hasParty ? sortHeader("Partido", "party_abbreviation", sort) : ""}${hasStatus ? sortHeader("Situação", "status", sort) : ""}${sortHeader("Votos", "votes", sort, true)}${sortHeader("% do recorte", "share", sort, true)}</tr></thead><tbody>${rows.map((row) => `<tr><td>${row.ballot_number}</td><td><strong>${escapeHtml(row.display_name)}</strong></td>${hasParty ? `<td>${escapeHtml(row.party_abbreviation || "—")}</td>` : ""}${hasStatus ? `<td>${escapeHtml(row.status || "—")}</td>` : ""}<td class="num">${fmt.format(row.votes)}</td><td class="num">${pct.format(row.share)}</td></tr>`).join("")}</tbody></table></div>`;
+  container.innerHTML = `<div class="data-table-wrap"><table><thead><tr>${sortHeader("Nº", "ballot_number", sort)}${sortHeader("Candidatura", "display_name", sort)}${hasParty ? sortHeader("Partido", "party_abbreviation", sort) : ""}${hasStatus ? sortHeader("Situação", "status", sort) : ""}${sortHeader("Votos nominais", "votes", sort, true)}${sortHeader("% dos válidos", "share", sort, true)}</tr></thead><tbody>${rows.map((row) => `<tr><td>${row.ballot_number}</td><td><strong>${escapeHtml(row.display_name)}</strong></td>${hasParty ? `<td>${escapeHtml(row.party_abbreviation || "—")}</td>` : ""}${hasStatus ? `<td>${escapeHtml(row.status || "—")}</td>` : ""}<td class="num">${fmt.format(row.votes)}</td><td class="num">${pct.format(row.share)}</td></tr>`).join("")}</tbody></table></div>`;
   bindSorting(container, sort, () => updateCandidates(source, municipality, query));
   const municipalTotals = new Map(); const selectedVotes = new Map();
-  source.forEach((row) => { municipalTotals.set(row.municipality_code, (municipalTotals.get(row.municipality_code) || 0) + row.votes); if (candidateKey(row) === selectedKey) selectedVotes.set(row.municipality_code, (selectedVotes.get(row.municipality_code) || 0) + row.votes); });
+  source.forEach((row) => { municipalTotals.set(row.municipality_code, (municipalTotals.get(row.municipality_code) || 0) + row.votes); });
+  candidateSource.forEach((row) => { if (candidateKey(row) === selectedKey) selectedVotes.set(row.municipality_code, (selectedVotes.get(row.municipality_code) || 0) + row.votes); });
   const mapRows = state.data.municipalities.map((item) => ({ ...item, share: (selectedVotes.get(item.municipality_code) || 0) / (municipalTotals.get(item.municipality_code) || 1) }));
   const selectedCandidate = statewide.find((row) => row.candidate_key === selectedKey);
-  document.querySelector("#candidate-map-caption").textContent = selectedCandidate ? `${selectedCandidate.ballot_number} · ${selectedCandidate.candidate_name || selectedCandidate.ballot_name}` : "";
+  document.querySelector("#candidate-map-caption").textContent = selectedCandidate ? `${selectedCandidate.ballot_number} · ${selectedCandidate.candidate_name}` : "";
   document.querySelector("#candidate-ranking").innerHTML = barChart(sortRows(mapRows, "share", "desc").map((row) => ({ label: row.municipality_name, value: row.share })), { format: pct.format, limit: 14 });
   const chooseMunicipality = (code) => { document.querySelector("#candidate-municipality").value = code; updateCandidates(source, code, query); };
   renderMap("candidate-map", mapRows, "share", { format: pct.format, selected: municipality, onSelect: chooseMunicipality });
+
+  const partyAbbreviations = new Map();
+  candidateSource.forEach((row) => {
+    if (row.party_abbreviation) partyAbbreviations.set(String(row.ballot_number).slice(0, 2), row.party_abbreviation);
+  });
+  const parties = aggregateCandidates(partySource, municipality).map((row) => ({
+    ...row,
+    party_abbreviation: partyAbbreviations.get(String(row.ballot_number)) || "",
+    display_name: row.ballot_name,
+    share: validVotes ? row.votes / validVotes : 0,
+  }));
+  const partyPanel = document.querySelector("#party-votes-panel");
+  partyPanel.hidden = parties.length === 0;
+  if (parties.length) {
+    const partyRows = sortRows(parties, state.view.partySort.key, state.view.partySort.direction);
+    const partyTotal = sum(parties, "votes");
+    document.querySelector("#party-caption").textContent = `${fmt.format(partyTotal)} votos dados diretamente ao partido no recorte · separados das candidaturas`;
+    document.querySelector("#party-chart").innerHTML = barChart(sortRows(parties, "votes", "desc").map((row) => ({ label: `${row.ballot_number} · ${row.party_abbreviation || row.display_name}`, value: row.votes })), { limit: 15 });
+    const partyContainer = document.querySelector("#party-table"); const partySort = state.view.partySort;
+    partyContainer.innerHTML = `<div class="data-table-wrap"><table><thead><tr>${sortHeader("Nº", "ballot_number", partySort)}${sortHeader("Partido", "display_name", partySort)}${sortHeader("Votos de legenda", "votes", partySort, true)}${sortHeader("% dos válidos", "share", partySort, true)}</tr></thead><tbody>${partyRows.map((row) => `<tr><td>${row.ballot_number}</td><td><strong>${escapeHtml(row.party_abbreviation || row.display_name)}</strong>${row.party_abbreviation ? `<small class="table-detail">${escapeHtml(row.display_name)}</small>` : ""}</td><td class="num">${fmt.format(row.votes)}</td><td class="num">${pct.format(row.share)}</td></tr>`).join("")}</tbody></table></div>`;
+    bindSorting(partyContainer, partySort, () => updateCandidates(source, municipality, query));
+  }
 }
 
 function renderExplorador() {
