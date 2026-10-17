@@ -42,6 +42,8 @@ O relatório está em
 
 ## Dashboard
 
+**[Abrir o Atlas Eleitoral do Ceará](https://andrre-m.github.io/tse-urna-pipeline/)**
+
 O frontend em `dashboard/` é HTML, CSS e JavaScript estáticos. O build lê apenas
 a Gold eleitoral e gera arquivos em `dist/`, que não são versionados.
 
@@ -56,8 +58,9 @@ As cinco áreas do produto são:
 `Fonte e metodologia` permanece como conteúdo secundário no rodapé. O dashboard
 não acessa Bronze, Silver ou RAW.
 
-A publicação pública do dashboard será adicionada depois que a Gold eleitoral
-for publicada, validada e fixada por uma revisão imutável.
+O site é reconstruído no GitHub Actions a partir da revisão imutável da Gold
+eleitoral e publicado no GitHub Pages. As geometrias municipais são obtidas
+diretamente das APIs oficiais do IBGE durante o build.
 
 ## Arquitetura
 
