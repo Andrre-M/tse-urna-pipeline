@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Atlas Eleitoral do Ceará 2026, primeiro turno">
+    <title>Atlas Eleitoral do Ceará 2026</title>
+    <link rel="stylesheet" href="assets/styles.css?v=2">
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Ir para o conteúdo</a>
+    <header class="site-header">
+      <a class="brand" href="#overview" aria-label="Atlas Eleitoral do Ceará">
+        <span class="brand-mark" aria-hidden="true">CE</span>
+        <span><strong>Atlas Eleitoral</strong><small>Ceará 2026</small></span>
+      </a>
+      <button class="menu-button" aria-expanded="false" aria-controls="main-nav">Menu</button>
+      <nav id="main-nav" aria-label="Páginas principais">
+        <a href="#overview" data-route="overview">Overview</a>
+        <a href="#municipios" data-route="municipios">Municípios</a>
+        <a href="#eleitorado" data-route="eleitorado">Eleitorado</a>
+        <a href="#cargos" data-route="cargos">Cargos</a>
+        <a href="#explorador" data-route="explorador">Explorador</a>
+      </nav>
+    </header>
+
+    <main id="content" tabindex="-1">
+      <div id="loading" class="loading"><span></span>Preparando o atlas…</div>
+      <section id="app" aria-live="polite"></section>
+    </main>
+
+    <footer>
+      <p><strong>Atlas Eleitoral do Ceará 2026</strong><br>Dados oficiais do TSE</p>
+      <button class="text-button" id="methodology-button">Fonte e metodologia</button>
+      <p class="footer-note">Projeto independente, sem vínculo com o Tribunal Superior Eleitoral.</p>
+    </footer>
+
+    <dialog id="methodology-dialog">
+      <div class="dialog-heading">
+        <div><span class="eyebrow">Transparência</span><h2>Fonte e metodologia</h2></div>
+        <button class="icon-button" aria-label="Fechar" id="methodology-close">×</button>
+      </div>
+      <div id="methodology-content"></div>
+    </dialog>
+
+    <script src="assets/app.js?v=2" defer></script>
+  </body>
+</html>
