@@ -16,6 +16,9 @@ dist/
 /data/quarantine/**
 /data/silver/**
 /data/gold/**
+/data/gold_electoral/**
+/data/dashboard/**
+/.dashboard-cache/**
 /dataset/data/**
 /metadata/*.db
 /metadata/*.db-*

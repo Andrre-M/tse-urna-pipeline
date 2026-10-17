@@ -22,6 +22,10 @@ from tse_urna.preflight import run_preflight
 from tse_urna.quality.report import build_quality_summary, write_quality_report
 from tse_urna.transformation.bronze import build_bronze_batch
 from tse_urna.transformation.compaction import compact_bronze_partition
+from tse_urna.transformation.electoral_gold import (
+    ElectoralSourceFiles,
+    build_electoral_gold,
+)
 from tse_urna.transformation.gold import build_gold_partition
 from tse_urna.transformation.silver import build_section_coverage, build_silver_events
 
@@ -447,6 +451,45 @@ def gold(
         )
     else:
         typer.echo("Parciais validadas; tabelas Gold finais ainda não publicadas.")
+
+
+@app.command("electoral-gold")
+def electoral_gold(
+    source_dir: Annotated[
+        Path,
+        typer.Option(
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            help="Diretório com os CSVs oficiais do TSE convertidos para UTF-8.",
+        ),
+    ],
+) -> None:
+    """Constrói a extensão Gold eleitoral oficial do Ceará 2026, turno 1."""
+    sources = ElectoralSourceFiles(
+        state_votes=source_dir / "votacao_secao_2026_CE.csv",
+        presidential_votes=source_dir / "votacao_secao_2026_BR.csv",
+        state_section_detail=source_dir / "detalhe_votacao_secao_2026_CE.csv",
+        presidential_section_detail=source_dir / "detalhe_votacao_secao_2026_BR.csv",
+        electorate_profile=source_dir / "perfil_eleitor_secao_2026_CE.csv",
+        state_candidates=source_dir / "consulta_cand_2026_CE.csv",
+        presidential_candidates=source_dir / "consulta_cand_2026_BR.csv",
+    )
+    output_dir = (
+        settings.data_dir
+        / "gold_electoral"
+        / "year=2026"
+        / "round=1"
+        / "uf=CE"
+    )
+    result = build_electoral_gold(sources=sources, output_dir=output_dir)
+    typer.echo(
+        f"Gold eleitoral concluída: {result.municipalities} municípios, "
+        f"{result.sections} seções e {result.registered_electors} eleitores "
+        "no perfil cadastral."
+    )
+    for table, rows in result.row_counts.items():
+        typer.echo(f"{table}: {rows} linha(s)")
 
 
 @app.command("quality-report")
