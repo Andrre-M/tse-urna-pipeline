@@ -1,5 +1,15 @@
 # TSE Urna Pipeline
 
+[![Testes](https://github.com/Andrre-M/tse-urna-pipeline/actions/workflows/tests.yml/badge.svg)](https://github.com/Andrre-M/tse-urna-pipeline/actions/workflows/tests.yml)
+[![Dashboard](https://github.com/Andrre-M/tse-urna-pipeline/actions/workflows/pages.yml/badge.svg)](https://github.com/Andrre-M/tse-urna-pipeline/actions/workflows/pages.yml)
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-244761)](https://www.python.org/)
+[![Licença MIT](https://img.shields.io/badge/licen%C3%A7a-MIT-c6a32a)](LICENSE)
+
+[Dashboard ao vivo](https://andrre-m.github.io/tse-urna-pipeline/) ·
+[Gold publicada](https://huggingface.co/datasets/Andrre-M/tse-urna-ce-2026-gold) ·
+[Arquitetura](docs/architecture.md) ·
+[Validação](docs/electoral_gold_validation_ce_2026_round_1.md)
+
 Pipeline reprodutível em Python para organizar dados públicos do Tribunal
 Superior Eleitoral e transformá-los em produtos analíticos verificáveis.
 
@@ -11,6 +21,14 @@ O projeto trabalha com dois domínios independentes:
   eleitoral própria e consumidos por um dashboard totalmente estático.
 
 O recorte atual é o Ceará, eleição de 2026, primeiro turno, pleito 3220.
+
+## O que este repositório entrega
+
+- pipeline rastreável de ingestão, transformação e validação com Polars;
+- contratos e produtos separados para logs técnicos, perfil cadastral e
+  resultados eleitorais;
+- Gold eleitoral em Parquet com manifesto, checksums e revisão pública fixada;
+- Atlas Eleitoral estático, reproduzível e publicado sem servidor de aplicação.
 
 ## Resultado atual
 
