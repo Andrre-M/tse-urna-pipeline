@@ -419,7 +419,7 @@ def gold(
         None, min=1, help="Limita os Parquets Silver pendentes nesta execução."
     ),
 ) -> None:
-    """Agrega a Silver em tabelas Gold reiniciáveis para o dashboard."""
+    """Agrega a Silver de logs em tabelas Gold reiniciáveis."""
     uf = uf.upper()
     partition = Path(f"year={year}") / f"pleito={pleito}" / f"uf={uf}"
     result = build_gold_partition(

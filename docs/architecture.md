@@ -63,7 +63,12 @@ seções, as dimensões do perfil cadastral e os metadados de candidaturas.
 
 ## Dashboard estático
 
-O build recebe explicitamente o diretório da Gold eleitoral e gera:
+Por padrão, `scripts/build_dashboard.py` baixa a revisão da Gold eleitoral
+fixada no código e confere o hash do manifesto e dos sete Parquets. Os arquivos
+validados ficam em cache. Para desenvolvimento, `--gold-dir` permite indicar
+uma cópia local.
+
+O build gera:
 
 - um atlas estadual com indicadores, municípios, eleitorado e índice de seções;
 - um arquivo por cargo para os resultados de candidaturas;
@@ -90,4 +95,4 @@ A publicação do dashboard depende desta ordem:
 2. publicar os Parquets em `Andrre-M/tse-urna-ce-2026-gold`;
 3. validar a cópia remota e fixar sua revisão imutável;
 4. reconstruir o dashboard consumindo somente a revisão fixada no build;
-5. publicar o artefato estático e executar o smoke test da URL pública.
+5. publicar o artefato estático e conferir o carregamento da página e dos dados.

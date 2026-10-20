@@ -10,8 +10,9 @@
 [Arquitetura](docs/architecture.md) ·
 [Validação](docs/electoral_gold_validation_ce_2026_round_1.md)
 
-Pipeline reprodutível em Python para organizar dados públicos do Tribunal
-Superior Eleitoral e transformá-los em produtos analíticos verificáveis.
+Este projeto baixa e processa dados públicos do TSE com Python e Polars.
+Os arquivos tratados são publicados em Parquet e alimentam o Atlas Eleitoral,
+onde é possível consultar municípios, candidaturas e o perfil do eleitorado.
 
 O projeto trabalha com dois domínios independentes:
 
@@ -22,13 +23,12 @@ O projeto trabalha com dois domínios independentes:
 
 O recorte atual é o Ceará, eleição de 2026, primeiro turno, pleito 3220.
 
-## O que este repositório entrega
+## O que tem aqui
 
-- pipeline rastreável de ingestão, transformação e validação com Polars;
-- contratos e produtos separados para logs técnicos, perfil cadastral e
-  resultados eleitorais;
-- Gold eleitoral em Parquet com manifesto, checksums e revisão pública fixada;
-- Atlas Eleitoral estático, reproduzível e publicado sem servidor de aplicação.
+- coleta de logs com controle de downloads e retomada do processamento;
+- transformações em Polars e conferência dos totais estaduais, municipais e por seção;
+- tabelas Parquet publicadas com manifesto e checksums;
+- dashboard em HTML, CSS e JavaScript, hospedado no GitHub Pages.
 
 ## Resultado atual
 
@@ -73,8 +73,8 @@ As cinco áreas do produto são:
 4. **Cargos** — resultados, candidaturas, mapas e comparações territoriais;
 5. **Explorador** — navegação progressiva por município, zona e seção.
 
-`Fonte e metodologia` permanece como conteúdo secundário no rodapé. O dashboard
-não acessa Bronze, Silver ou RAW.
+As definições dos indicadores e suas fontes estão no rodapé, em
+`Fonte e metodologia`.
 
 O site é reconstruído no GitHub Actions a partir da revisão imutável da Gold
 eleitoral e publicado no GitHub Pages. As geometrias municipais são obtidas
@@ -124,7 +124,7 @@ $env:TSE_DATA_DIR = 'D:\dados\tse-urna\data'
 $env:TSE_METADATA_DIR = 'D:\dados\tse-urna\metadata'
 ```
 
-## Gold eleitoral local
+## Construir a Gold eleitoral
 
 O comando espera os sete CSVs oficiais convertidos para UTF-8 em um mesmo
 diretório:
@@ -140,7 +140,9 @@ uv run python scripts/build_electoral_gold.py <fontes> <gold-destino>
 uv run python scripts/validate_electoral_gold.py <gold-destino>
 ```
 
-Por padrão, o build baixa e valida a revisão imutável da Gold eleitoral
+## Gerar o dashboard
+
+Por padrão, o build baixa e valida a revisão fixada da Gold eleitoral
 publicada. As geometrias e a relação de municípios usadas no mapa vêm das APIs
 oficiais do IBGE e são fornecidas como arquivos locais, sem serem incorporadas
 ao repositório:
@@ -153,7 +155,8 @@ uv run python scripts/build_dashboard.py `
   --ibge-municipalities <municipios-ibge-json>
 ```
 
-`--gold-dir` existe apenas como override explícito para desenvolvimento local.
+Para testar com uma Gold local, passe `--gold-dir <diretorio-da-gold>`.
+O workflow de publicação usa a revisão fixada no script de build.
 
 ## Limites
 
