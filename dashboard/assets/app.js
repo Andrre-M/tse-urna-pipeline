@@ -4,7 +4,8 @@ const state = { data: null, route: "overview", cache: new Map(), view: {} };
 const app = document.querySelector("#app");
 const loading = document.querySelector("#loading");
 const fmt = new Intl.NumberFormat("pt-BR");
-const pct = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 });
+const percentFormatter = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 });
+const pct = { format: (value) => Number(value) > 0 && Number(value) < 0.001 ? "<0,1%" : percentFormatter.format(value) };
 const pct2 = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 2 });
 
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({
@@ -392,6 +393,23 @@ function renderExplorador() {
   if (stored) updateMunicipality(); else showState();
 }
 
+function sectionFlag(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (["s", "sim"].includes(normalized)) return true;
+  if (["n", "não", "nao"].includes(normalized)) return false;
+  return null;
+}
+
+function sectionOfficeResults(summary, results) {
+  const rows = results.filter((row) => row.office === summary.office).sort((a, b) => b.votes - a.votes);
+  const candidates = rows.filter((row) => row.result_type === "candidate");
+  const parties = rows.filter((row) => row.result_type === "party");
+  const label = (row) => `${row.ballot_number} · ${row.candidate_name || row.ballot_name}${row.party_abbreviation ? ` (${row.party_abbreviation})` : ""}`;
+  const chart = barChart(candidates.map((row) => ({ label: label(row), value: row.votes })), { candidate: true, limit: 12 });
+  const table = (items, heading) => `<details class="chart-spacing"><summary>${heading} (${items.length})</summary><div class="data-table-wrap"><table><thead><tr><th>Opção de voto</th><th class="num">Votos</th><th class="num">% dos válidos</th></tr></thead><tbody>${items.map((row) => `<tr><td>${escapeHtml(label(row))}</td><td class="num">${fmt.format(row.votes)}</td><td class="num">${pct.format(summary.valid_votes ? row.votes / summary.valid_votes : 0)}</td></tr>`).join("")}</tbody></table></div></details>`;
+  return `<article class="panel"><h3>${escapeHtml(summary.office)}</h3><p class="panel-intro">${fmt.format(summary.total_votes)} votos registrados</p>${stacked(summary)}<div class="chart-spacing"><h4>Candidaturas</h4><p class="panel-intro">${candidates.length > 12 ? `12 maiores votações entre ${candidates.length} candidaturas com votos nesta seção.` : `${candidates.length} candidaturas com votos nesta seção.`}</p>${chart}${table(candidates, "Consultar todas as candidaturas com votos")}</div>${parties.length ? `<div class="chart-spacing"><h4>Votos de legenda</h4><p class="panel-intro">${fmt.format(sum(parties, "votes"))} votos dados diretamente aos partidos.</p>${table(parties, "Consultar votos de legenda")}</div>` : ""}</article>`;
+}
+
 async function loadSection(municipality, zone, section) {
   const target = document.querySelector("#section-detail");
   target.innerHTML = `<div class="empty"><div><strong>Carregando a seção ${section}</strong>Buscando o bloco da zona ${zone}.</div></div>`;
@@ -400,7 +418,9 @@ async function loadSection(municipality, zone, section) {
     const summaries = expandFrame(payload.summaries).filter((row) => row.section === section).map((row) => ({ ...row, municipality_name: payload.municipality_name }));
     const results = expandFrame(payload.results).filter((row) => row.section === section);
     const first = summaries[0]; const president = byOffice(summaries, "Presidente");
-    target.innerHTML = `<span class="eyebrow">${escapeHtml(first.municipality_name)} · Zona ${zone}</span><h2>Seção ${section}</h2><p>${escapeHtml(first.voting_place_name)} · ${escapeHtml(first.voting_place_address)}</p><section class="metric-grid compact-metrics">${metric("Aptos · Presidente", fmt.format(president.eligible_voters), "Universo do cargo")}${metric("Comparecimento", fmt.format(president.turnout), pct.format(president.turnout_rate))}${metric("Abstenção", fmt.format(president.abstentions), pct.format(president.abstention_rate))}${metric("Situação", first.section_installed === "S" ? "Instalada" : first.section_installed, first.section_annulled === "S" ? "Seção anulada" : "Sem indicação de anulação")}</section><div class="section-heading"><h2>Resultados por cargo</h2></div><div class="panel-grid">${summaries.map((summary) => { const rows = results.filter((row) => row.office === summary.office).sort((a, b) => b.votes - a.votes); return `<article class="panel"><h3>${escapeHtml(summary.office)}</h3><p class="panel-intro">${fmt.format(summary.total_votes)} votos registrados</p>${stacked(summary)}<div class="chart-spacing">${barChart(rows.map((row) => ({ label: row.result_type === "blank" ? "Voto branco" : row.result_type === "null" ? "Voto nulo" : `${row.ballot_number} · ${row.candidate_name || row.ballot_name}${row.party_abbreviation ? ` (${row.party_abbreviation})` : ""}`, value: row.votes })), { candidate: true, limit: 12 })}</div></article>`; }).join("")}</div><p class="note"><strong>Privacidade e interpretação.</strong> A urna publica totais agregados por seção; o voto individual continua secreto. Logs técnicos não são usados nesta consulta.</p>`;
+    const installed = sectionFlag(first.section_installed);
+    const annulled = sectionFlag(first.section_annulled);
+    target.innerHTML = `<span class="eyebrow">${escapeHtml(first.municipality_name)} · Zona ${zone}</span><h2>Seção ${section}</h2><p>${escapeHtml(first.voting_place_name)} · ${escapeHtml(first.voting_place_address)}</p><section class="metric-grid compact-metrics">${metric("Aptos · Presidente", fmt.format(president.eligible_voters), "Universo do cargo")}${metric("Comparecimento", fmt.format(president.turnout), pct.format(president.turnout_rate))}${metric("Abstenção", fmt.format(president.abstentions), pct.format(president.abstention_rate))}${metric("Situação", installed === true ? "Instalada" : installed === false ? "Não instalada" : "Não informada", annulled === true ? "Seção anulada" : annulled === false ? "Sem indicação de anulação" : "Anulação não informada")}</section><div class="section-heading"><h2>Resultados por cargo</h2></div><div class="panel-grid">${summaries.map((summary) => sectionOfficeResults(summary, results)).join("")}</div><p class="note"><strong>Privacidade e interpretação.</strong> A urna publica totais agregados por seção; o voto individual continua secreto. Logs técnicos não são usados nesta consulta.</p>`;
   } catch (error) {
     target.innerHTML = `<div class="empty"><div><strong>Não foi possível abrir a seção.</strong>${escapeHtml(error.message)}</div></div>`;
   }
